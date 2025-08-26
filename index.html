@@ -310,7 +310,6 @@
             };
             
             try {
-                // Use a consistent app ID for the database path
                 const appId = 'body-measurement-app';
                 const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData);
                 currentProfile = { id: docRef.id, ...profileData };
@@ -326,7 +325,6 @@
 
         async function loadProfiles() {
             if (!userId) return;
-            // Use a consistent app ID for the database path
             const appId = 'body-measurement-app';
             const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`);
             const q = query(profilesCol);
@@ -470,7 +468,7 @@
                     displayResults(measurements);
                     resultsGrid.classList.remove('hidden');
                 } else {
-                    showModal("The AI analysis failed after multiple attempts. Please check your API key (if local) and network connection.");
+                    showModal("The AI analysis failed after multiple attempts. Please check your API key and network connection.");
                 }
             } catch (error) {
                 console.error("Analysis failed:", error);
@@ -515,16 +513,10 @@
                 }
             };
             
-            let apiKey = ""; 
-            // In a real deployed environment (like this one), the API key is handled by the server.
-            // For local testing, it uses the key you provide.
-            const IS_LOCAL_ENV = !window.location.hostname.includes('github.io');
-            if (IS_LOCAL_ENV) {
-                if (!USER_PROVIDED_API_KEY) {
-                    showModal("Configuration Error: To run locally, you must add your Gemini API key to the script.");
-                    return null;
-                }
-                apiKey = USER_PROVIDED_API_KEY;
+            const apiKey = USER_PROVIDED_API_KEY;
+            if (!apiKey) {
+                showModal("Configuration Error: The Gemini API key is missing from the script. This is required for the analysis to work.");
+                return null;
             }
             
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
