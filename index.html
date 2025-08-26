@@ -517,42 +517,32 @@
         });
         
         async function getAiAnalysis(frontData, sideData, backData, profile) {
-            const prompt = `Act as an expert anthropometric analyst. Your task is to generate a detailed body analysis report based on three images and user data. Follow these steps precisely:
+            const prompt = `Act as an expert anthropometric analyst. Your task is to generate a detailed body analysis report based on three images and user data, using a reference diagram for landmark identification.
 
-            **Step 1: Calibration**
-            - Analyze the front-view image to find the person's full-body pixel height (from the lowest point of the feet to the highest point of the head).
-            - Use the user's real-world height (${profile.height} cm) and the pixel height to calculate a pixel-to-cm ratio.
+            **Measurement Definitions (based on standard anatomical points):**
+            - **Shoulder Width:** Biacromial width (point 7L to 7R).
+            - **Chest:** Circumference at nipple level (point 6).
+            - **Waist:** Circumference at the narrowest point of the torso (point 8).
+            - **Hip:** Circumference at the widest point of the buttocks/hips (point 9).
+            - **Thighs:** Circumference of the upper thigh (point 11).
+            - **Ankle:** Circumference at the narrowest point above the ankle bone (point 12).
+            - **Arm Length:** From the acromion process (shoulder point 7) to the wrist bone (point 13).
+            - **Neck:** Circumference at the middle of the neck (point 5).
+            - **Wrist:** Circumference at the narrowest point of the wrist.
 
-            **Step 2: Measurement & Analysis**
-            - For each required measurement, identify the anatomical landmarks on the images.
-            - Measure the widths and depths in pixels.
-            - Use the pixel-to-cm ratio to convert pixel measurements to centimeters.
-            - For circumferences, estimate them based on widths and depths.
-            - Determine the user's somatotype (body type: Ectomorph, Mesomorph, Endomorph, or a combination) based on the visual data and measurements.
-            - Suggest sports the user is well-suited for and sports to approach with caution based on their physique.
+            **Critical Instructions:**
+            1.  **Calibrate:** First, analyze the front-view image to determine the full-body pixel height (from the lowest point of the feet to the highest point of the head). Use this and the user's real-world height (${profile.height} cm) to calculate a precise pixel-to-cm ratio.
+            2.  **Measure & Analyze:** For each measurement, identify the landmarks as defined above. Measure widths/depths in pixels, convert to CM using the ratio, and estimate circumferences.
+            3.  **Analyze Physique:** Determine the user's somatotype (Ectomorph, Mesomorph, Endomorph, or a combination) and suggest suitable sports.
+            4.  **Identify Coordinates:** For each measurement, provide the [x, y] pixel coordinates of the key points on the relevant image ('front', 'side', or 'back').
+            5.  **JSON Output:** Return ONLY a single JSON object with the specified structure. Provide all measurements to at least one decimal place.
 
-            **Step 3: Coordinate Identification**
-            - For each measurement, provide the [x, y] pixel coordinates of the key points on the relevant image ('front', 'side', or 'back'). For example, for 'Shoulder Width', provide the coordinates of the left and right acromion processes on the 'front' image.
+            **User Profile:**
+            - Height: ${profile.height} cm
+            - Weight: ${profile.weight} kg
+            - Gender: ${profile.gender}
 
-            **Step 4: JSON Output**
-            - Return a single JSON object with the following structure. Provide all measurements to at least one decimal place.
-
-            {
-              "measurements": { "Waist": 85.5, "Hip": 102.1, ... },
-              "coordinates": {
-                "height": { "image": "front", "points": [[x1, y1], [x2, y2]] },
-                "shoulderWidth": { "image": "front", "points": [[x1, y1], [x2, y2]] },
-                ...
-              },
-              "bodyType": {
-                "type": "Mesomorph",
-                "description": "A brief explanation of the Mesomorph body type."
-              },
-              "sportsRecommendation": {
-                "recommended": ["Weightlifting", "Sprinting"],
-                "caution": ["Marathon running"]
-              }
-            }`;
+            Begin the analysis now and return only the final JSON output.`;
 
             const payload = {
                 contents: [{
