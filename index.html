@@ -128,8 +128,13 @@
             <!-- Right Panel -->
             <div class="w-full lg:w-2/3">
                  <div id="calibration-instructions" class="bg-indigo-900/50 p-4 rounded-lg text-center mb-4 hidden">
-                    <p class="text-lg font-semibold">Current Task: <span id="calibration-task-name" class="text-yellow-300"></span></p>
-                    <p class="text-sm text-gray-400">Click and drag to draw a line on the highlighted image.</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-left">
+                            <p class="text-lg font-semibold">Current Task: <span id="calibration-task-name" class="text-yellow-300"></span></p>
+                            <p class="text-sm text-gray-400">Click and drag to draw a line on the highlighted image.</p>
+                        </div>
+                        <button id="redraw-last-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-lg text-sm flex items-center gap-2"><i data-lucide="undo-2"></i> Redraw Last</button>
+                    </div>
                 </div>
                 <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
@@ -243,6 +248,7 @@
         const calibrationInstructions = document.getElementById('calibration-instructions');
         const calibrationTaskName = document.getElementById('calibration-task-name');
         const analysisLoaderContainer = document.getElementById('analysis-loader-container');
+        const redrawLastBtn = document.getElementById('redraw-last-btn');
 
         // --- Navigation & Modal ---
         function showScreen(screenName) {
@@ -266,6 +272,7 @@
             showScreen('dashboard');
         });
         document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
+        redrawLastBtn.addEventListener('click', handleRedrawLast);
 
         // --- Initialization & Auth ---
         async function initialize() {
@@ -413,7 +420,7 @@
         // --- Calibration Logic ---
         const calibrationTasks = [
             { name: 'Draw Height (Top to Bottom)', key: 'front_height', image: 'front' },
-            { name: 'Draw Arm Span (Fingertip to Fingertip)', key: 'front_arm_span', image: 'front' },
+            { name: 'Draw Shoulder Width (Bone to Bone)', key: 'front_shoulder_width', image: 'front' },
             { name: 'Draw Height (Top to Bottom)', key: 'side_height', image: 'side' },
             { name: 'Draw Chest Depth (Front to Back)', key: 'side_depth', image: 'side' },
             { name: 'Draw Height (Top to Bottom)', key: 'back_height', image: 'back' },
@@ -507,12 +514,15 @@
             const currentPoint = getCanvasCoords(event, canvas);
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(calibrationState.startPoint.x, calibrationState.startPoint.y);
-            ctx.lineTo(currentPoint.x, currentPoint.y);
-            ctx.stroke();
+            // Redraw previous lines on the same canvas
+            for (const key in calibrationState.lines) {
+                const task = calibrationTasks.find(t => t.key === key);
+                if (task.image === imageKey) {
+                    const line = calibrationState.lines[key];
+                    drawLine(canvas, line.start, line.end);
+                }
+            }
+            drawLine(canvas, calibrationState.startPoint, currentPoint);
         }
 
         function handleCanvasMouseUp(event, imageKey) {
@@ -528,19 +538,59 @@
             updateCalibrationInstructions();
         }
 
+        function handleRedrawLast() {
+            if (calibrationState.currentIndex === 0) return;
+
+            calibrationState.currentIndex--;
+            const lastTask = calibrationTasks[calibrationState.currentIndex];
+            delete calibrationState.lines[lastTask.key];
+
+            const canvas = calibrationState.canvases[lastTask.image];
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (const key in calibrationState.lines) {
+                const task = calibrationTasks.find(t => t.key === key);
+                if (task.image === lastTask.image) {
+                    const line = calibrationState.lines[key];
+                    drawLine(canvas, line.start, line.end);
+                }
+            }
+            updateCalibrationInstructions();
+        }
+
+        function drawLine(canvas, start, end) {
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+        }
+
         async function runAnalysisWithCalibratedRatios() {
             analysisLoaderContainer.classList.remove('hidden');
             startCalibrationBtn.disabled = true;
 
             try {
                 const frontHeightPixels = Math.abs(calibrationState.lines.front_height.start.y - calibrationState.lines.front_height.end.y);
-                const frontArmSpanPixels = Math.abs(calibrationState.lines.front_arm_span.start.x - calibrationState.lines.front_arm_span.end.x);
+                const frontShoulderPixels = Math.abs(calibrationState.lines.front_shoulder_width.start.x - calibrationState.lines.front_shoulder_width.end.x);
+                const sideHeightPixels = Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y);
                 const sideDepthPixels = Math.abs(calibrationState.lines.side_depth.start.x - calibrationState.lines.side_depth.end.x);
+                const backHeightPixels = Math.abs(calibrationState.lines.back_height.start.y - calibrationState.lines.back_height.end.y);
+                const backShoulderPixels = Math.abs(calibrationState.lines.back_shoulder_width.start.x - calibrationState.lines.back_shoulder_width.end.x);
+                
+                // Assume shoulder width is ~25% of height for a rough real-world value to calibrate X axis
+                const estimatedShoulderWidthCm = currentProfile.height * 0.25;
 
                 const ratios = {
                     front_y_ratio: currentProfile.height / frontHeightPixels,
-                    front_x_ratio: currentProfile.height / frontArmSpanPixels, // Assuming arm span = height
-                    side_z_ratio: (currentProfile.height / Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y)) * (sideDepthPixels / frontHeightPixels) // Complex ratio for depth
+                    front_x_ratio: estimatedShoulderWidthCm / frontShoulderPixels,
+                    side_y_ratio: currentProfile.height / sideHeightPixels,
+                    side_z_ratio: (estimatedShoulderWidthCm * 0.5) / sideDepthPixels, // Depth is roughly half of width
+                    back_y_ratio: currentProfile.height / backHeightPixels,
+                    back_x_ratio: estimatedShoulderWidthCm / backShoulderPixels,
                 };
                 console.log("Calculated Ratios:", ratios);
 
@@ -571,9 +621,9 @@
 
             **Critical Instructions:**
             1.  **Use Provided Ratios ONLY:** You MUST use the following ratios. Do NOT attempt to recalibrate.
-                - For Front View (X/Y axes): Use front_x_ratio (${ratios.front_x_ratio.toFixed(4)}) and front_y_ratio (${ratios.front_y_ratio.toFixed(4)}).
-                - For Side View (Z/Y axes): Use side_z_ratio (${ratios.side_z_ratio.toFixed(4)}) for depth and front_y_ratio for height.
-                - For Back View: Use the same ratios as the front view.
+                - For Front View: y_ratio=${ratios.front_y_ratio.toFixed(4)}, x_ratio=${ratios.front_x_ratio.toFixed(4)}
+                - For Side View: y_ratio=${ratios.side_y_ratio.toFixed(4)}, z_ratio (depth)=${ratios.side_z_ratio.toFixed(4)}
+                - For Back View: y_ratio=${ratios.back_y_ratio.toFixed(4)}, x_ratio=${ratios.back_x_ratio.toFixed(4)}
             2.  **Measure in Pixels:** Identify anatomical landmarks on the images and measure their pixel distances.
             3.  **Convert to CM:** Use the correct ratio for the view and axis to convert pixel distances into centimeters.
             4.  **Analyze Physique & Recommend:** Based on the final calculated measurements, determine the user's somatotype and suggest suitable sports.
