@@ -169,26 +169,32 @@
                     <h3 class="text-2xl font-semibold mb-4 mt-6">Measurements</h3>
                     <div id="results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center"></div>
                 </section>
-                <section>
-                    <h3 class="text-2xl font-semibold mb-4 mt-6">Body Type Analysis</h3>
-                    <div class="bg-gray-700 p-6 rounded-lg">
-                        <h4 id="body-type-title" class="text-xl font-bold text-indigo-400 mb-2"></h4>
-                        <p id="body-type-description" class="text-gray-300"></p>
+                <div id="in-depth-analysis-section" class="space-y-6">
+                    <button id="get-in-depth-analysis-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg">Get In-Depth AI Analysis</button>
+                    <div id="in-depth-loader" class="hidden flex-col items-center justify-center"><div class="loader"></div><p class="mt-2 text-gray-400">Generating analysis...</p></div>
+                    <div id="in-depth-content" class="hidden space-y-6">
+                        <section>
+                            <h3 class="text-2xl font-semibold mb-4 mt-6">Body Type Analysis</h3>
+                            <div class="bg-gray-700 p-6 rounded-lg">
+                                <h4 id="body-type-title" class="text-xl font-bold text-indigo-400 mb-2"></h4>
+                                <p id="body-type-description" class="text-gray-300"></p>
+                            </div>
+                        </section>
+                        <section>
+                            <h3 class="text-2xl font-semibold mb-4 mt-6">Sports Recommendations</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h4 class="text-xl font-bold text-green-400 mb-2">Recommended Sports</h4>
+                                    <ul id="recommended-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
+                                </div>
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h4 class="text-xl font-bold text-yellow-400 mb-2">Sports to Approach with Caution</h4>
+                                    <ul id="caution-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                </section>
-                <section>
-                    <h3 class="text-2xl font-semibold mb-4 mt-6">Sports Recommendations</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-gray-700 p-6 rounded-lg">
-                            <h4 class="text-xl font-bold text-green-400 mb-2">Recommended Sports</h4>
-                            <ul id="recommended-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
-                        </div>
-                        <div class="bg-gray-700 p-6 rounded-lg">
-                            <h4 class="text-xl font-bold text-yellow-400 mb-2">Sports to Approach with Caution</h4>
-                            <ul id="caution-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
-                        </div>
-                    </div>
-                </section>
+                </div>
             </div>
         </div>
         
@@ -231,6 +237,7 @@
         let app, db, auth, userId;
         let currentProfile = null;
         let calibrationState = {};
+        let lastCalculatedMeasurements = null;
         
         // --- DOM Elements ---
         const screens = {
@@ -254,6 +261,9 @@
         const analysisLoaderContainer = document.getElementById('analysis-loader-container');
         const analysisStatusText = document.getElementById('analysis-status-text');
         const redrawLastBtn = document.getElementById('redraw-last-btn');
+        const getInDepthAnalysisBtn = document.getElementById('get-in-depth-analysis-btn');
+        const inDepthLoader = document.getElementById('in-depth-loader');
+        const inDepthContent = document.getElementById('in-depth-content');
 
         // --- Navigation & Modal ---
         function showScreen(screenName) {
@@ -305,6 +315,8 @@
         });
         document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
         redrawLastBtn.addEventListener('click', handleRedrawLast);
+        getInDepthAnalysisBtn.addEventListener('click', handleInDepthAnalysis);
+
 
         // --- Initialization & Auth ---
         async function initialize() {
@@ -563,7 +575,6 @@
             const currentPoint = getCanvasCoords(event, canvas);
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Redraw previous lines on the same canvas
             for (const key in calibrationState.lines) {
                 const task = calibrationTasks.find(t => t.key === key);
                 if (task.image === imageKey) {
@@ -635,29 +646,23 @@
                     front_y_ratio: currentProfile.height / frontHeightPixels,
                     front_x_ratio: currentProfile.shoulderWidth / frontShoulderPixels,
                     side_y_ratio: currentProfile.height / sideHeightPixels,
-                    side_z_ratio: (currentProfile.shoulderWidth * 0.5) / sideDepthPixels, // Estimate depth based on shoulder width
+                    side_z_ratio: (currentProfile.shoulderWidth * 0.5) / sideDepthPixels,
                     back_y_ratio: currentProfile.height / backHeightPixels,
                     back_x_ratio: currentProfile.shoulderWidth / backShoulderPixels,
                 };
                 
                 const coordinates = await getAiCoordinates();
                 if (!coordinates) {
-                    showModal("The AI could not identify the measurement points on the images. Please try again with clearer photos.");
+                    showModal("The AI could not identify all measurement points on the images. Please try again with clearer photos.");
                     return;
                 }
 
                 analysisStatusText.textContent = "Calculating measurements...";
                 const measurements = calculateMeasurements(coordinates, ratios);
+                lastCalculatedMeasurements = measurements; // Save for in-depth analysis
 
-                analysisStatusText.textContent = "Analyzing physique...";
-                const analysis = await getAiPhysiqueAnalysis(measurements);
-
-                if (analysis) {
-                     displayReport({ measurements, ...analysis });
-                     showScreen('report');
-                } else {
-                    showModal("The AI failed to analyze the calculated measurements.");
-                }
+                displayBasicReport(measurements);
+                showScreen('report');
 
             } catch (error) {
                  console.error("Analysis with ratios failed:", error);
@@ -674,7 +679,7 @@
         }
 
         async function getAiCoordinates() {
-            const prompt = `Your task is to identify the pixel coordinates of specific anatomical landmarks on the three provided body images (front, side, back). Return ONLY a JSON object with the coordinates. Do not perform any calculations. The required points are: shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back.`;
+            const prompt = `Your task is to identify the pixel coordinates of specific anatomical landmarks on the three provided body images (front, side, back). Return ONLY a JSON object with the coordinates. The required points are: shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back.`;
             
             const [frontData, sideData, backData] = await Promise.all([
                 resizeAndEncodeImage(document.getElementById('front-image').files[0]),
@@ -785,23 +790,40 @@
             }
             return null;
         }
+        
+        async function handleInDepthAnalysis() {
+            if (!lastCalculatedMeasurements) return;
+            getInDepthAnalysisBtn.classList.add('hidden');
+            inDepthLoader.classList.remove('hidden');
 
-        function displayReport(data) {
+            const analysis = await getAiPhysiqueAnalysis(lastCalculatedMeasurements);
+            if (analysis) {
+                document.getElementById('body-type-title').textContent = analysis.bodyType.type;
+                document.getElementById('body-type-description').textContent = analysis.bodyType.description;
+
+                const recommendedList = document.getElementById('recommended-sports-list');
+                recommendedList.innerHTML = analysis.sportsRecommendation.recommended.map(sport => `<li>${sport}</li>`).join('');
+                const cautionList = document.getElementById('caution-sports-list');
+                cautionList.innerHTML = analysis.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
+                inDepthContent.classList.remove('hidden');
+            } else {
+                showModal("Could not generate the in-depth analysis at this time.");
+                getInDepthAnalysisBtn.classList.remove('hidden');
+            }
+            inDepthLoader.classList.add('hidden');
+        }
+
+        function displayBasicReport(measurements) {
             resultsGrid.innerHTML = '';
-            for (const [key, value] of Object.entries(data.measurements)) {
+            for (const [key, value] of Object.entries(measurements)) {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'bg-gray-800 p-4 rounded-lg';
                 resultItem.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(2)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
                 resultsGrid.appendChild(resultItem);
             }
-
-            document.getElementById('body-type-title').textContent = data.bodyType.type;
-            document.getElementById('body-type-description').textContent = data.bodyType.description;
-
-            const recommendedList = document.getElementById('recommended-sports-list');
-            recommendedList.innerHTML = data.sportsRecommendation.recommended.map(sport => `<li>${sport}</li>`).join('');
-            const cautionList = document.getElementById('caution-sports-list');
-            cautionList.innerHTML = data.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
+            // Reset and hide the in-depth section for the new report
+            inDepthContent.classList.add('hidden');
+            getInDepthAnalysisBtn.classList.remove('hidden');
         }
 
     </script>
