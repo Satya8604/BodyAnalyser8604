@@ -157,7 +157,7 @@
                         </p>
                         <div id="analysis-loader" class="flex-col items-center justify-center py-8 hidden">
                             <div class="loader"></div>
-                            <p class="mt-4 text-lg text-gray-400">AI is analyzing your images...</p>
+                            <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is analyzing your images...</p>
                         </div>
                         <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center hidden">
                             <!-- Results will be injected here -->
@@ -219,6 +219,7 @@
         const profileDisplay = document.getElementById('profile-display');
         const analysisResults = document.getElementById('analysis-results');
         const analysisLoader = document.getElementById('analysis-loader');
+        const analysisStatusText = document.getElementById('analysis-status-text');
         const resultsGrid = document.getElementById('results-grid');
         const analyzeBtn = document.getElementById('analyze-btn');
 
@@ -462,28 +463,59 @@
             analyzeBtn.disabled = true;
 
             try {
+                analysisStatusText.textContent = "Processing images (1/3)...";
                 const [frontData, sideData, backData] = await Promise.all([
                     resizeAndEncodeImage(frontFile),
                     resizeAndEncodeImage(sideFile),
                     resizeAndEncodeImage(backFile)
                 ]);
 
-                const measurements = await getAiMeasurements(frontData, sideData, backData, currentProfile);
-                if (measurements) {
-                    displayResults(measurements);
+                analysisStatusText.textContent = "Running AI analysis (2/3)...";
+                const analysisPromises = [
+                    getAiMeasurements(frontData, sideData, backData, currentProfile),
+                    getAiMeasurements(frontData, sideData, backData, currentProfile),
+                    getAiMeasurements(frontData, sideData, backData, currentProfile)
+                ];
+                const allResults = await Promise.all(analysisPromises);
+
+                analysisStatusText.textContent = "Averaging results (3/3)...";
+                const finalMeasurements = processAndAverageResults(allResults);
+
+                if (finalMeasurements) {
+                    displayResults(finalMeasurements);
                     resultsGrid.classList.remove('hidden');
                 } else {
-                    showModal("The AI analysis failed after multiple attempts. Please check your API key and network connection.");
+                    showModal("The AI analysis failed to produce consistent results. Please try again with clearer, well-lit photos.");
                 }
             } catch (error) {
                 console.error("Analysis failed:", error);
-                showModal("An unexpected error occurred during image processing. Please try again.");
+                showModal("An unexpected error occurred during the analysis process. Please try again.");
             } finally {
                 analysisLoader.style.display = 'none';
                 analyzeBtn.disabled = false;
             }
         });
         
+        function getMedian(numbers) {
+            const sorted = numbers.slice().sort((a, b) => a - b);
+            const middle = Math.floor(sorted.length / 2);
+            return sorted[middle];
+        }
+
+        function processAndAverageResults(results) {
+            const validResults = results.filter(r => r !== null);
+            if (validResults.length === 0) return null;
+
+            const finalMeasurements = {};
+            const measurementKeys = Object.keys(validResults[0]);
+
+            for (const key of measurementKeys) {
+                const values = validResults.map(result => result[key]);
+                finalMeasurements[key] = getMedian(values);
+            }
+            return finalMeasurements;
+        }
+
         async function getAiMeasurements(frontData, sideData, backData, profile) {
             const prompt = `Act as a highly accurate anthropometric computer vision tool. Your task is to estimate body measurements in centimeters based on the three provided images (front, side, back) and the user's profile data.
 
@@ -494,7 +526,8 @@
                 * 'Hip' is the widest point of the buttocks/hips.
                 * 'Shoulder Width' is the biacromial diameter (bone-to-bone).
             3.  **Cross-Reference Views:** Use all three images to get the most accurate estimation. For example, use the side view to help determine hip and chest depth, and the front/back views for widths.
-            4.  **Output Format:** Provide your response ONLY in the requested JSON format. Do not include any other text, explanations, or apologies.
+            4.  **Precision:** Provide all measurements to at least one decimal place (e.g., 85.5).
+            5.  **Output Format:** Provide your response ONLY in the requested JSON format. Do not include any other text, explanations, or apologies.
 
             **User Profile:**
             - Height: ${profile.height} cm
@@ -535,42 +568,32 @@
             }
             
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const maxRetries = 3;
-            let attempt = 0;
-            let delay = 1000;
+            
+            // Simplified retry logic for a single attempt within the multi-pass system
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            while (attempt < maxRetries) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.ok) {
-                        const result = await response.json();
-                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                           const jsonText = result.candidates[0].content.parts[0].text;
-                           return JSON.parse(jsonText);
-                        }
-                    } else {
-                         const errorBody = await response.text();
-                         console.error(`API Error on attempt ${attempt + 1}:`, response.status, errorBody);
-                         if (response.status === 403) {
-                            showModal("API Error: Access Denied. Your API key is likely invalid or has restrictions.");
-                            return null;
-                         }
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
+                       const jsonText = result.candidates[0].content.parts[0].text;
+                       return JSON.parse(jsonText);
                     }
-                } catch (error) {
-                    console.error(`Fetch error on attempt ${attempt + 1}:`, error);
+                } else {
+                     const errorBody = await response.text();
+                     console.error(`API Error:`, response.status, errorBody);
+                     if (response.status === 403) {
+                        showModal("API Error: Access Denied. Your API key is likely invalid or has restrictions.");
+                     }
                 }
-                attempt++;
-                if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
+            } catch (error) {
+                console.error(`Fetch error:`, error);
             }
-            return null;
+            return null; // Return null on failure
         }
 
         function displayResults(measurements) {
@@ -580,7 +603,7 @@
                 resultItem.className = 'bg-gray-800 p-4 rounded-lg';
                 resultItem.innerHTML = `
                     <p class="text-sm text-gray-400">${key}</p>
-                    <p class="text-2xl font-bold">${Number(value).toFixed(1)} <span class="text-base font-normal text-gray-500">cm</span></p>
+                    <p class="text-2xl font-bold">${Number(value).toFixed(2)} <span class="text-base font-normal text-gray-500">cm</span></p>
                 `;
                 resultsGrid.appendChild(resultItem);
             }
