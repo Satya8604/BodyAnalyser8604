@@ -152,7 +152,7 @@
                 </div>
                 <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full">
                     <div class="loader"></div>
-                    <p class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
+                    <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
                 </div>
             </div>
         </div>
@@ -248,6 +248,7 @@
         const calibrationInstructions = document.getElementById('calibration-instructions');
         const calibrationTaskName = document.getElementById('calibration-task-name');
         const analysisLoaderContainer = document.getElementById('analysis-loader-container');
+        const analysisStatusText = document.getElementById('analysis-status-text');
         const redrawLastBtn = document.getElementById('redraw-last-btn');
 
         // --- Navigation & Modal ---
@@ -476,6 +477,7 @@
         }
         
         function updateCalibrationInstructions() {
+            redrawLastBtn.style.display = calibrationState.currentIndex > 0 ? 'flex' : 'none';
             if (calibrationState.currentIndex >= calibrationTasks.length) {
                 calibrationInstructions.innerHTML = '<p class="text-lg font-semibold text-green-400">Calibration Complete! Generating Report...</p>';
                 runAnalysisWithCalibratedRatios();
@@ -581,19 +583,17 @@
                 const backHeightPixels = Math.abs(calibrationState.lines.back_height.start.y - calibrationState.lines.back_height.end.y);
                 const backShoulderPixels = Math.abs(calibrationState.lines.back_shoulder_width.start.x - calibrationState.lines.back_shoulder_width.end.x);
                 
-                // Assume shoulder width is ~25% of height for a rough real-world value to calibrate X axis
                 const estimatedShoulderWidthCm = currentProfile.height * 0.25;
 
                 const ratios = {
                     front_y_ratio: currentProfile.height / frontHeightPixels,
                     front_x_ratio: estimatedShoulderWidthCm / frontShoulderPixels,
                     side_y_ratio: currentProfile.height / sideHeightPixels,
-                    side_z_ratio: (estimatedShoulderWidthCm * 0.5) / sideDepthPixels, // Depth is roughly half of width
+                    side_z_ratio: (estimatedShoulderWidthCm * 0.5) / sideDepthPixels,
                     back_y_ratio: currentProfile.height / backHeightPixels,
                     back_x_ratio: estimatedShoulderWidthCm / backShoulderPixels,
                 };
-                console.log("Calculated Ratios:", ratios);
-
+                
                 const analysisResult = await getAiAnalysisWithRatios(ratios);
                 if (analysisResult) {
                      displayReport(analysisResult);
