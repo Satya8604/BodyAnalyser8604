@@ -485,14 +485,23 @@
         });
         
         async function getAiMeasurements(frontData, sideData, backData, profile) {
-            const prompt = `Act as a highly accurate computer vision AI specializing in anthropometry. Based on the three images provided (front, side, back) and the user's profile data (Height: ${profile.height} cm, Weight: ${profile.weight} kg, Gender: ${profile.gender}), estimate the following body measurements in centimeters. Provide your response ONLY in the requested JSON format.
+            const prompt = `Act as a highly accurate anthropometric computer vision tool. Your task is to estimate body measurements in centimeters based on the three provided images (front, side, back) and the user's profile data.
 
-            User Profile:
+            **Critical Instructions:**
+            1.  **Use Height as Scale:** The user's provided height (${profile.height} cm) is the primary reference for scaling all other measurements. Your estimations must be proportional to this height.
+            2.  **Identify Anatomical Landmarks:** Before providing a measurement, mentally identify the correct anatomical landmark. For example:
+                * 'Waist' is the narrowest point of the torso.
+                * 'Hip' is the widest point of the buttocks/hips.
+                * 'Shoulder Width' is the biacromial diameter (bone-to-bone).
+            3.  **Cross-Reference Views:** Use all three images to get the most accurate estimation. For example, use the side view to help determine hip and chest depth, and the front/back views for widths.
+            4.  **Output Format:** Provide your response ONLY in the requested JSON format. Do not include any other text, explanations, or apologies.
+
+            **User Profile:**
             - Height: ${profile.height} cm
             - Weight: ${profile.weight} kg
             - Gender: ${profile.gender}
 
-            Analyze the images to determine the body measurements.`;
+            Analyze the images and provide the JSON output.`;
 
             const payload = {
                 contents: [{
