@@ -415,8 +415,9 @@
             { name: 'Draw Height (Top to Bottom)', key: 'front_height', image: 'front' },
             { name: 'Draw Arm Span (Fingertip to Fingertip)', key: 'front_arm_span', image: 'front' },
             { name: 'Draw Height (Top to Bottom)', key: 'side_height', image: 'side' },
+            { name: 'Draw Chest Depth (Front to Back)', key: 'side_depth', image: 'side' },
             { name: 'Draw Height (Top to Bottom)', key: 'back_height', image: 'back' },
-            { name: 'Draw Arm Span (Fingertip to Fingertip)', key: 'back_arm_span', image: 'back' },
+            { name: 'Draw Shoulder Width (Bone to Bone)', key: 'back_shoulder_width', image: 'back' },
         ];
 
         function startCalibration() {
@@ -532,18 +533,15 @@
             startCalibrationBtn.disabled = true;
 
             try {
-                // Calculate ratios
                 const frontHeightPixels = Math.abs(calibrationState.lines.front_height.start.y - calibrationState.lines.front_height.end.y);
-                const yRatio = currentProfile.height / frontHeightPixels; // cm per pixel (vertical)
-
                 const frontArmSpanPixels = Math.abs(calibrationState.lines.front_arm_span.start.x - calibrationState.lines.front_arm_span.end.x);
-                // Assuming arm span is roughly equal to height for x-axis calibration
-                const xRatio = currentProfile.height / frontArmSpanPixels; // cm per pixel (horizontal)
+                const sideDepthPixels = Math.abs(calibrationState.lines.side_depth.start.x - calibrationState.lines.side_depth.end.x);
 
-                const sideHeightPixels = Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y);
-                const zRatio = (currentProfile.height / sideHeightPixels) * 0.3; // Depth is an estimate, scaling it down
-
-                const ratios = { yRatio, xRatio, zRatio };
+                const ratios = {
+                    front_y_ratio: currentProfile.height / frontHeightPixels,
+                    front_x_ratio: currentProfile.height / frontArmSpanPixels, // Assuming arm span = height
+                    side_z_ratio: (currentProfile.height / Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y)) * (sideDepthPixels / frontHeightPixels) // Complex ratio for depth
+                };
                 console.log("Calculated Ratios:", ratios);
 
                 const analysisResult = await getAiAnalysisWithRatios(ratios);
@@ -569,15 +567,15 @@
         }
 
         async function getAiAnalysisWithRatios(ratios) {
-             const prompt = `Act as an expert anthropometric analyst. I have provided you with three images and precise pixel-to-centimeter ratios for the X, Y, and Z axes. Your task is to use these ratios to calculate body measurements and generate a full analysis report.
+             const prompt = `Act as an expert anthropometric analyst. I have provided three images and precise, user-calibrated pixel-to-centimeter ratios for each view. Your task is to use these ratios to calculate body measurements and generate a full analysis report.
 
             **Critical Instructions:**
-            1.  **Use Provided Ratios:** You MUST use the following ratios for all calculations. Do NOT attempt to recalibrate.
-                - Y-axis (Vertical): ${ratios.yRatio.toFixed(4)} cm/pixel
-                - X-axis (Horizontal): ${ratios.xRatio.toFixed(4)} cm/pixel
-                - Z-axis (Depth): ${ratios.zRatio.toFixed(4)} cm/pixel
-            2.  **Measure in Pixels:** For each required measurement, identify the anatomical landmarks on the images and measure the corresponding widths, heights, and depths in PIXELS.
-            3.  **Convert to CM:** Use the provided ratios to convert all pixel measurements into final centimeter values.
+            1.  **Use Provided Ratios ONLY:** You MUST use the following ratios. Do NOT attempt to recalibrate.
+                - For Front View (X/Y axes): Use front_x_ratio (${ratios.front_x_ratio.toFixed(4)}) and front_y_ratio (${ratios.front_y_ratio.toFixed(4)}).
+                - For Side View (Z/Y axes): Use side_z_ratio (${ratios.side_z_ratio.toFixed(4)}) for depth and front_y_ratio for height.
+                - For Back View: Use the same ratios as the front view.
+            2.  **Measure in Pixels:** Identify anatomical landmarks on the images and measure their pixel distances.
+            3.  **Convert to CM:** Use the correct ratio for the view and axis to convert pixel distances into centimeters.
             4.  **Analyze Physique & Recommend:** Based on the final calculated measurements, determine the user's somatotype and suggest suitable sports.
             5.  **JSON Output:** Return ONLY a single JSON object with the final measurements, body type analysis, and sports recommendations.
 
@@ -650,26 +648,6 @@
             recommendedList.innerHTML = data.sportsRecommendation.recommended.map(sport => `<li>${sport}</li>`).join('');
             const cautionList = document.getElementById('caution-sports-list');
             cautionList.innerHTML = data.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
-
-            // This part needs to be re-thought as the AI doesn't return coordinates anymore
-            // For now, we just show the un-annotated images in the report
-            const reportCanvases = {
-                front: document.getElementById('front-canvas'),
-                side: document.getElementById('side-canvas'),
-                back: document.getElementById('back-canvas')
-            };
-            Object.keys(reportCanvases).forEach(key => {
-                const canvas = reportCanvases[key];
-                const img = document.getElementById(`${key}-preview`);
-                const ctx = canvas.getContext('2d');
-                const draw = () => {
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    ctx.drawImage(img, 0, 0);
-                };
-                if (img.complete) draw();
-                else img.onload = draw;
-            });
         }
 
     </script>
