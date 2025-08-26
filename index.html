@@ -84,9 +84,10 @@
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                     </select>
-                    <div class="flex gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <input type="number" id="height" placeholder="Height (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                         <input type="number" id="weight" placeholder="Weight (kg)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
+                        <input type="number" id="shoulderWidth" placeholder="Shoulder Width (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                     </div>
                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Continue</button>
                 </form>
@@ -209,7 +210,7 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Configuration ---
         const firebaseConfig = {
@@ -335,6 +336,7 @@
                 gender: document.getElementById('gender').value,
                 height: parseFloat(document.getElementById('height').value),
                 weight: parseFloat(document.getElementById('weight').value),
+                shoulderWidth: parseFloat(document.getElementById('shoulderWidth').value),
             };
             try {
                 const appId = 'body-measurement-app';
@@ -363,19 +365,33 @@
             profileSnapshot.forEach((doc) => {
                 const profile = { id: doc.id, ...doc.data() };
                 const profileElement = document.createElement('div');
-                profileElement.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600 transition';
+                profileElement.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center';
                 profileElement.innerHTML = `
-                    <div>
+                    <div class="cursor-pointer flex-grow" data-profile-id="${profile.id}">
                         <p class="font-bold text-lg">${profile.name}</p>
                         <p class="text-sm text-gray-400">${profile.sports || 'N/A'} | ${profile.country || 'N/A'}</p>
                     </div>
-                    <i data-lucide="chevron-right"></i>
+                    <button data-delete-id="${profile.id}" class="text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>
                 `;
-                profileElement.onclick = () => {
+                
+                profileElement.querySelector('.cursor-pointer').onclick = () => {
                     currentProfile = profile;
                     updateMainScreen();
                     showScreen('main');
                 };
+
+                profileElement.querySelector('button').onclick = async () => {
+                    if (confirm(`Are you sure you want to delete the profile for ${profile.name}?`)) {
+                        try {
+                            await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id));
+                            loadProfiles(); // Refresh the list
+                        } catch (error) {
+                            console.error("Error deleting profile:", error);
+                            showModal("Failed to delete profile.");
+                        }
+                    }
+                };
+
                 profileList.appendChild(profileElement);
             });
             lucide.createIcons();
@@ -391,6 +407,7 @@
                 <p><strong>Gender:</strong> ${currentProfile.gender}</p>
                 <p><strong>Height:</strong> ${currentProfile.height} cm</p>
                 <p><strong>Weight:</strong> ${currentProfile.weight} kg</p>
+                <p><strong>Shoulder Width:</strong> ${currentProfile.shoulderWidth} cm</p>
             `;
         }
         
@@ -584,15 +601,13 @@
                 const backHeightPixels = Math.abs(calibrationState.lines.back_height.start.y - calibrationState.lines.back_height.end.y);
                 const backShoulderPixels = Math.abs(calibrationState.lines.back_shoulder_width.start.x - calibrationState.lines.back_shoulder_width.end.x);
                 
-                const estimatedShoulderWidthCm = currentProfile.height * 0.25;
-
                 const ratios = {
                     front_y_ratio: currentProfile.height / frontHeightPixels,
-                    front_x_ratio: estimatedShoulderWidthCm / frontShoulderPixels,
+                    front_x_ratio: currentProfile.shoulderWidth / frontShoulderPixels,
                     side_y_ratio: currentProfile.height / sideHeightPixels,
-                    side_z_ratio: (estimatedShoulderWidthCm * 0.5) / sideDepthPixels,
+                    side_z_ratio: (currentProfile.shoulderWidth * 0.5) / sideDepthPixels, // Estimate depth based on shoulder width
                     back_y_ratio: currentProfile.height / backHeightPixels,
-                    back_x_ratio: estimatedShoulderWidthCm / backShoulderPixels,
+                    back_x_ratio: currentProfile.shoulderWidth / backShoulderPixels,
                 };
                 
                 const coordinates = await getAiCoordinates();
@@ -688,20 +703,19 @@
             const chest_depth_px = Math.abs(coords.chest_front.x - coords.chest_back.x);
             const chest_width_cm = chest_width_px * ratios.front_x_ratio;
             const chest_depth_cm = chest_depth_px * ratios.side_z_ratio;
-            measurements["Chest"] = pi * (chest_width_cm + chest_depth_cm) / 2; // Ramanujan's ellipse approximation
+            measurements["Chest"] = pi * (3 * (chest_width_cm + chest_depth_cm) - Math.sqrt((3 * chest_width_cm + chest_depth_cm) * (chest_width_cm + 3 * chest_depth_cm))) / 2;
 
-            // ... similar calculations for Waist, Hip, etc.
             const waist_width_px = Math.abs(coords.waist_left.x - coords.waist_right.x);
             const waist_depth_px = Math.abs(coords.waist_front.x - coords.waist_back.x);
             const waist_width_cm = waist_width_px * ratios.front_x_ratio;
             const waist_depth_cm = waist_depth_px * ratios.side_z_ratio;
-            measurements["Waist"] = pi * (waist_width_cm + waist_depth_cm) / 2;
+            measurements["Waist"] = pi * (3 * (waist_width_cm + waist_depth_cm) - Math.sqrt((3 * waist_width_cm + waist_depth_cm) * (waist_width_cm + 3 * waist_depth_cm))) / 2;
 
             const hip_width_px = Math.abs(coords.hip_left.x - coords.hip_right.x);
             const hip_depth_px = Math.abs(coords.hip_front.x - coords.hip_back.x);
             const hip_width_cm = hip_width_px * ratios.front_x_ratio;
             const hip_depth_cm = hip_depth_px * ratios.side_z_ratio;
-            measurements["Hip"] = pi * (hip_width_cm + hip_depth_cm) / 2;
+            measurements["Hip"] = pi * (3 * (hip_width_cm + hip_depth_cm) - Math.sqrt((3 * hip_width_cm + hip_depth_cm) * (hip_width_cm + 3 * hip_depth_cm))) / 2;
 
             return measurements;
         }
@@ -716,7 +730,7 @@
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    temperature: 0.2, // Allow a little creativity for analysis
+                    temperature: 0.2,
                 }
             };
             const apiKey = USER_PROVIDED_API_KEY;
