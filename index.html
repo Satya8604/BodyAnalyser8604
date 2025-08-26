@@ -499,15 +499,15 @@
                 analysisStatusText.textContent = "Running AI analysis with Gemini 2.5 Pro...";
                 const analysisResult = await getAiAnalysis(frontData, sideData, backData, currentProfile);
 
-                if (analysisResult) {
+                if (analysisResult && validateAnalysisResult(analysisResult)) {
                     lastAnalysisData = analysisResult;
                     displayReport(analysisResult);
                     showScreen('report');
                 } else {
-                    showModal("The AI analysis failed to produce a valid report. Please try again with clearer, well-lit photos.");
+                    showModal("The AI analysis failed to produce a valid report. This can happen if the images are unclear or do not show the full body. Please try again.");
                 }
             } catch (error) {
-                console.error("Analysis failed:", error);
+                console.error("Detailed analysis error:", error);
                 showModal("An unexpected error occurred during the analysis process. Please try again.");
             } finally {
                 document.getElementById('image-previews').classList.remove('hidden');
@@ -515,6 +515,10 @@
                 analyzeBtn.disabled = false;
             }
         });
+
+        function validateAnalysisResult(data) {
+            return data && data.measurements && data.coordinates && data.bodyType && data.sportsRecommendation;
+        }
         
         async function getAiAnalysis(frontData, sideData, backData, profile) {
             const prompt = `Act as an expert anthropometric analyst. Your task is to generate a detailed body analysis report based on three images and user data, using a reference diagram for landmark identification.
@@ -579,7 +583,12 @@
                     const result = await response.json();
                     if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
                        const jsonText = result.candidates[0].content.parts[0].text;
-                       return JSON.parse(jsonText);
+                       try {
+                           return JSON.parse(jsonText);
+                       } catch (e) {
+                           console.error("Failed to parse AI response JSON:", jsonText);
+                           return null;
+                       }
                     }
                 } else {
                      const errorBody = await response.text();
