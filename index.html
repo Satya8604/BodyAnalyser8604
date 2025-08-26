@@ -216,16 +216,15 @@
 
         // --- Configuration ---
         const firebaseConfig = {
-            apiKey: "AIzaSyBR3wIl8vMZFtCPBbFDO_wKBYt-4X59DME",
-            authDomain: "body-analyser-8604.firebaseapp.com",
-            projectId: "body-analyser-8604",
-            storageBucket: "body-analyser-8604.appspot.com",
-            messagingSenderId: "830923844833",
-            appId: "1:830923844833:web:e34e32a42f861814a15ba0",
-            measurementId: "G-SQMMQW3RV2"
+            apiKey: "YOUR_API_KEY", // PASTE YOUR NEW FIREBASE API KEY
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
         
-        const USER_PROVIDED_API_KEY = "AIzaSyCKNdSuOEmJF-EbPkig6LDuHtenh7KABMw";
+        const USER_PROVIDED_API_KEY = "YOUR_GEMINI_API_KEY"; // PASTE YOUR GEMINI API KEY
 
         // --- App State ---
         let app, db, auth, userId;
@@ -256,6 +255,10 @@
         const redrawLastBtn = document.getElementById('redraw-last-btn');
 
         // --- Navigation & Modal ---
+        function showScreen(screenName) {
+            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            screens[screenName].classList.add('active');
+        }
         function showModal(message, onConfirm) {
             modalMessage.textContent = message;
             modalButtons.innerHTML = ''; // Clear previous buttons
