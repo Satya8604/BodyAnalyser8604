@@ -198,8 +198,7 @@
         // --- App State ---
         let app, db, auth, userId;
         let currentProfile = null;
-        const IS_LOCAL_ENV = typeof __app_id === 'undefined';
-
+        
         // --- DOM Elements ---
         const screens = {
             loading: document.getElementById('loading-screen'),
@@ -311,8 +310,9 @@
             };
             
             try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const docRef = await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/profiles`), profileData);
+                // Use a consistent app ID for the database path
+                const appId = 'body-measurement-app';
+                const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData);
                 currentProfile = { id: docRef.id, ...profileData };
                 console.log("Profile saved to Firestore with ID:", docRef.id);
                 updateMainScreen();
@@ -320,14 +320,15 @@
                 newProfileForm.reset();
             } catch (error) {
                 console.error("Error adding document: ", error);
-                showModal("Failed to save profile to the database. Please try again.");
+                showModal("Failed to save profile to the database. Please check your Firestore security rules and ensure the path is correct.");
             }
         });
 
         async function loadProfiles() {
             if (!userId) return;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const profilesCol = collection(db, `/artifacts/${appId}/users/${userId}/profiles`);
+            // Use a consistent app ID for the database path
+            const appId = 'body-measurement-app';
+            const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`);
             const q = query(profilesCol);
             
             const profileSnapshot = await getDocs(q);
@@ -515,6 +516,9 @@
             };
             
             let apiKey = ""; 
+            // In a real deployed environment (like this one), the API key is handled by the server.
+            // For local testing, it uses the key you provide.
+            const IS_LOCAL_ENV = !window.location.hostname.includes('github.io');
             if (IS_LOCAL_ENV) {
                 if (!USER_PROVIDED_API_KEY) {
                     showModal("Configuration Error: To run locally, you must add your Gemini API key to the script.");
