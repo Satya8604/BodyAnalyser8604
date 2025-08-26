@@ -129,12 +129,16 @@
                         </div>
                     </div>
                 </div>
+                 <button id="analyze-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition-transform transform hover:scale-105 shadow-lg flex items-center justify-center gap-3 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    <i data-lucide="scan-line"></i>
+                    Generate Report
+                </button>
             </div>
 
             <!-- Right Panel -->
             <div class="w-full lg:w-2/3">
                 <!-- Image Previews -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
                         <img id="front-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Front+View" alt="Front Preview" class="object-cover w-full h-full rounded-xl">
                     </div>
@@ -145,28 +149,67 @@
                         <img id="back-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Back+View" alt="Back Preview" class="object-cover w-full h-full rounded-xl">
                     </div>
                 </div>
-                <!-- Analysis Section -->
-                <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
-                    <button id="analyze-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition-transform transform hover:scale-105 shadow-lg flex items-center justify-center gap-3 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        <i data-lucide="scan-line"></i>
-                        Analyse Measurements
-                    </button>
-                    <div id="analysis-results" class="mt-6 hidden">
-                         <p class="text-center text-sm text-yellow-400 bg-yellow-900/50 p-3 rounded-lg mb-4">
-                            <strong>Disclaimer:</strong> These measurements are AI-generated estimates and are for informational purposes only. Accuracy may vary.
-                        </p>
-                        <div id="analysis-loader" class="flex-col items-center justify-center py-8 hidden">
-                            <div class="loader"></div>
-                            <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is analyzing your images...</p>
-                        </div>
-                        <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center hidden">
-                            <!-- Results will be injected here -->
-                        </div>
-                    </div>
+                 <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full">
+                    <div class="loader"></div>
+                    <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is analyzing your images...</p>
                 </div>
             </div>
         </div>
         
+        <!-- Detailed Report Screen -->
+        <div id="report-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-6">
+            <div class="w-full max-w-5xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-4xl font-bold">Analysis Report</h2>
+                    <button id="back-to-main-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
+                        <i data-lucide="arrow-left"></i> Back to Analysis
+                    </button>
+                </div>
+
+                <!-- Annotated Images -->
+                <section>
+                    <h3 class="text-2xl font-semibold mb-4">Annotated Images</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <canvas id="front-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
+                        <canvas id="side-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
+                        <canvas id="back-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
+                    </div>
+                </section>
+
+                <!-- Measurements -->
+                <section>
+                    <h3 class="text-2xl font-semibold mb-4 mt-6">Measurements</h3>
+                    <div id="results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <!-- Results will be injected here -->
+                    </div>
+                </section>
+
+                <!-- Body Type Analysis -->
+                <section>
+                    <h3 class="text-2xl font-semibold mb-4 mt-6">Body Type Analysis</h3>
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 id="body-type-title" class="text-xl font-bold text-indigo-400 mb-2"></h4>
+                        <p id="body-type-description" class="text-gray-300"></p>
+                    </div>
+                </section>
+
+                <!-- Sports Recommendations -->
+                <section>
+                    <h3 class="text-2xl font-semibold mb-4 mt-6">Sports Recommendations</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-gray-700 p-6 rounded-lg">
+                            <h4 class="text-xl font-bold text-green-400 mb-2">Recommended Sports</h4>
+                            <ul id="recommended-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
+                        </div>
+                        <div class="bg-gray-700 p-6 rounded-lg">
+                            <h4 class="text-xl font-bold text-yellow-400 mb-2">Sports to Approach with Caution</h4>
+                            <ul id="caution-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
         <!-- Footer with your details -->
         <footer class="absolute bottom-0 left-0 right-0 p-4 text-center text-gray-500 text-sm">
             Made by <a href="https://www.linkedin.com/in/satya-kulthe/" target="_blank" class="text-indigo-400 hover:underline">Satya Kulthe</a>
@@ -192,7 +235,7 @@
             apiKey: "AIzaSyBR3wIl8vMZFtCPBbFDO_wKBYt-4X59DME",
             authDomain: "body-analyser-8604.firebaseapp.com",
             projectId: "body-analyser-8604",
-            storageBucket: "body-analyser-8604.appspot.com", // Corrected URL format
+            storageBucket: "body-analyser-8604.appspot.com",
             messagingSenderId: "830923844833",
             appId: "1:830923844833:web:e34e32a42f861814a15ba0",
             measurementId: "G-SQMMQW3RV2"
@@ -203,6 +246,7 @@
         // --- App State ---
         let app, db, auth, userId;
         let currentProfile = null;
+        let lastAnalysisData = null;
         
         // --- DOM Elements ---
         const screens = {
@@ -211,14 +255,14 @@
             dashboard: document.getElementById('profile-dashboard-screen'),
             newProfile: document.getElementById('new-profile-screen'),
             main: document.getElementById('main-analysis-screen'),
+            report: document.getElementById('report-screen'),
         };
         const modal = document.getElementById('custom-modal');
         const modalMessage = document.getElementById('modal-message');
         const newProfileForm = document.getElementById('new-profile-form');
         const profileList = document.getElementById('profile-list');
         const profileDisplay = document.getElementById('profile-display');
-        const analysisResults = document.getElementById('analysis-results');
-        const analysisLoader = document.getElementById('analysis-loader');
+        const analysisLoaderContainer = document.getElementById('analysis-loader-container');
         const analysisStatusText = document.getElementById('analysis-status-text');
         const resultsGrid = document.getElementById('results-grid');
         const analyzeBtn = document.getElementById('analyze-btn');
@@ -244,6 +288,7 @@
             resetMainScreen();
             showScreen('dashboard');
         });
+        document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
 
         // --- Initialization & Auth ---
         async function initialize() {
@@ -255,7 +300,6 @@
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        console.log("User signed in:", userId);
                         loadProfiles();
                         showScreen('dashboard');
                     } else {
@@ -305,7 +349,6 @@
                 showModal("You must be signed in to create a profile.");
                 return;
             }
-
             const profileData = {
                 name: document.getElementById('name').value,
                 sports: document.getElementById('sports').value,
@@ -314,18 +357,16 @@
                 height: parseFloat(document.getElementById('height').value),
                 weight: parseFloat(document.getElementById('weight').value),
             };
-            
             try {
                 const appId = 'body-measurement-app';
                 const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData);
                 currentProfile = { id: docRef.id, ...profileData };
-                console.log("Profile saved to Firestore with ID:", docRef.id);
                 updateMainScreen();
                 showScreen('main');
                 newProfileForm.reset();
             } catch (error) {
                 console.error("Error adding document: ", error);
-                showModal("Failed to save profile to the database. Please check your Firestore security rules and ensure the path is correct.");
+                showModal("Failed to save profile to the database. Please check your Firestore security rules.");
             }
         });
 
@@ -381,12 +422,8 @@
             document.getElementById('side-preview').src = 'https://placehold.co/300x400/1F2937/4B5563?text=Side+View';
             document.getElementById('back-preview').src = 'https://placehold.co/300x400/1F2937/4B5563?text=Back+View';
             ['front-image', 'side-image', 'back-image'].forEach(id => document.getElementById(id).value = '');
-            analysisResults.classList.add('hidden');
-            resultsGrid.classList.add('hidden');
-            analysisLoader.classList.add('hidden');
         }
 
-        // Image Preview Logic
         function setupImagePreview(inputId, previewId) {
             document.getElementById(inputId).addEventListener('change', (event) => {
                 const file = event.target.files[0];
@@ -413,25 +450,15 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let { width, height } = img;
-
                     if (width > height) {
-                        if (width > maxSize) {
-                            height *= maxSize / width;
-                            width = maxSize;
-                        }
+                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
                     } else {
-                        if (height > maxSize) {
-                            width *= maxSize / height;
-                            height = maxSize;
-                        }
+                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
                     }
-
                     canvas.width = width;
                     canvas.height = height;
-
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
                     const dataUrl = canvas.toDataURL(file.type);
                     resolve({
                         base64: dataUrl.split(',')[1],
@@ -457,83 +484,75 @@
                 return;
             }
             
-            analysisResults.classList.remove('hidden');
-            resultsGrid.classList.add('hidden');
-            analysisLoader.style.display = 'flex';
+            document.getElementById('image-previews').classList.add('hidden');
+            analysisLoaderContainer.classList.remove('hidden');
             analyzeBtn.disabled = true;
 
             try {
-                analysisStatusText.textContent = "Processing images (1/3)...";
+                analysisStatusText.textContent = "Processing images...";
                 const [frontData, sideData, backData] = await Promise.all([
                     resizeAndEncodeImage(frontFile),
                     resizeAndEncodeImage(sideFile),
                     resizeAndEncodeImage(backFile)
                 ]);
 
-                analysisStatusText.textContent = "Running AI analysis (2/3)...";
-                const analysisPromises = [
-                    getAiMeasurements(frontData, sideData, backData, currentProfile),
-                    getAiMeasurements(frontData, sideData, backData, currentProfile),
-                    getAiMeasurements(frontData, sideData, backData, currentProfile)
-                ];
-                const allResults = await Promise.all(analysisPromises);
+                analysisStatusText.textContent = "Running AI analysis...";
+                const analysisResult = await getAiAnalysis(frontData, sideData, backData, currentProfile);
 
-                analysisStatusText.textContent = "Averaging results (3/3)...";
-                const finalMeasurements = processAndAverageResults(allResults);
-
-                if (finalMeasurements) {
-                    displayResults(finalMeasurements);
-                    resultsGrid.classList.remove('hidden');
+                if (analysisResult) {
+                    lastAnalysisData = analysisResult;
+                    displayReport(analysisResult);
+                    showScreen('report');
                 } else {
-                    showModal("The AI analysis failed to produce consistent results. Please try again with clearer, well-lit photos.");
+                    showModal("The AI analysis failed to produce a valid report. Please try again with clearer, well-lit photos.");
                 }
             } catch (error) {
                 console.error("Analysis failed:", error);
                 showModal("An unexpected error occurred during the analysis process. Please try again.");
             } finally {
-                analysisLoader.style.display = 'none';
+                document.getElementById('image-previews').classList.remove('hidden');
+                analysisLoaderContainer.classList.add('hidden');
                 analyzeBtn.disabled = false;
             }
         });
         
-        function getMedian(numbers) {
-            const sorted = numbers.slice().sort((a, b) => a - b);
-            const middle = Math.floor(sorted.length / 2);
-            return sorted[middle];
-        }
+        async function getAiAnalysis(frontData, sideData, backData, profile) {
+            const prompt = `Act as an expert anthropometric analyst. Your task is to generate a detailed body analysis report based on three images and user data. Follow these steps precisely:
 
-        function processAndAverageResults(results) {
-            const validResults = results.filter(r => r !== null);
-            if (validResults.length === 0) return null;
+            **Step 1: Calibration**
+            - Analyze the front-view image to find the person's full-body pixel height (from the lowest point of the feet to the highest point of the head).
+            - Use the user's real-world height (${profile.height} cm) and the pixel height to calculate a pixel-to-cm ratio.
 
-            const finalMeasurements = {};
-            const measurementKeys = Object.keys(validResults[0]);
+            **Step 2: Measurement & Analysis**
+            - For each required measurement, identify the anatomical landmarks on the images.
+            - Measure the widths and depths in pixels.
+            - Use the pixel-to-cm ratio to convert pixel measurements to centimeters.
+            - For circumferences, estimate them based on widths and depths.
+            - Determine the user's somatotype (body type: Ectomorph, Mesomorph, Endomorph, or a combination) based on the visual data and measurements.
+            - Suggest sports the user is well-suited for and sports to approach with caution based on their physique.
 
-            for (const key of measurementKeys) {
-                const values = validResults.map(result => result[key]);
-                finalMeasurements[key] = getMedian(values);
-            }
-            return finalMeasurements;
-        }
+            **Step 3: Coordinate Identification**
+            - For each measurement, provide the [x, y] pixel coordinates of the key points on the relevant image ('front', 'side', or 'back'). For example, for 'Shoulder Width', provide the coordinates of the left and right acromion processes on the 'front' image.
 
-        async function getAiMeasurements(frontData, sideData, backData, profile) {
-            const prompt = `Act as a highly accurate anthropometric computer vision tool. Your task is to estimate body measurements in centimeters by following a strict calibration-then-measure process.
+            **Step 4: JSON Output**
+            - Return a single JSON object with the following structure. Provide all measurements to at least one decimal place.
 
-            **Critical Instructions:**
-            1.  **Calibrate:** First, analyze the front-view image to determine the full-body pixel height of the person (from the lowest point of the feet to the highest point of the head).
-            2.  **Calculate Ratio:** Use the user's provided real-world height (${profile.height} cm) and the measured pixel height to calculate a precise pixel-to-centimeter ratio.
-            3.  **Measure in Pixels:** For each required measurement (Waist, Hip, etc.), measure the corresponding widths and depths in PIXELS from the most appropriate images.
-            4.  **Convert to CM:** Use the calculated pixel-to-cm ratio to convert all your pixel measurements into final centimeter values.
-            5.  **Calculate Circumferences:** For circumferential measurements (Waist, Hip, Chest, Thighs, Ankle, Neck, Wrist), use the measured pixel widths and depths to estimate the circumference, then convert the final result to centimeters using the ratio.
-            6.  **Precision:** Provide all final centimeter measurements to at least one decimal place (e.g., 85.5).
-            7.  **Output Format:** Provide your response ONLY in the requested JSON format. Do not include any other text, explanations, or apologies.
-
-            **User Profile:**
-            - Height: ${profile.height} cm
-            - Weight: ${profile.weight} kg
-            - Gender: ${profile.gender}
-
-            Begin the analysis now and return only the final JSON output.`;
+            {
+              "measurements": { "Waist": 85.5, "Hip": 102.1, ... },
+              "coordinates": {
+                "height": { "image": "front", "points": [[x1, y1], [x2, y2]] },
+                "shoulderWidth": { "image": "front", "points": [[x1, y1], [x2, y2]] },
+                ...
+              },
+              "bodyType": {
+                "type": "Mesomorph",
+                "description": "A brief explanation of the Mesomorph body type."
+              },
+              "sportsRecommendation": {
+                "recommended": ["Weightlifting", "Sprinting"],
+                "caution": ["Marathon running"]
+              }
+            }`;
 
             const payload = {
                 contents: [{
@@ -548,21 +567,12 @@
                 generationConfig: {
                     responseMimeType: "application/json",
                     temperature: 0,
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            "Waist": { "type": "NUMBER" }, "Hip": { "type": "NUMBER" }, "Chest": { "type": "NUMBER" },
-                            "Wrist": { "type": "NUMBER" }, "Neck": { "type": "NUMBER" }, "Arm Length": { "type": "NUMBER" },
-                            "Thighs": { "type": "NUMBER" }, "Shoulder Width": { "type": "NUMBER" }, "Ankle": { "type": "NUMBER" }
-                        },
-                        required: ["Waist", "Hip", "Chest", "Wrist", "Neck", "Arm Length", "Thighs", "Shoulder Width", "Ankle"]
-                    }
                 }
             };
             
             const apiKey = USER_PROVIDED_API_KEY;
             if (!apiKey) {
-                showModal("Configuration Error: The Gemini API key is missing from the script. This is required for the analysis to work.");
+                showModal("Configuration Error: The Gemini API key is missing.");
                 return null;
             }
             
@@ -591,12 +601,13 @@
             } catch (error) {
                 console.error(`Fetch error:`, error);
             }
-            return null; // Return null on failure
+            return null;
         }
 
-        function displayResults(measurements) {
+        function displayReport(data) {
+            // Display measurements
             resultsGrid.innerHTML = '';
-            for (const [key, value] of Object.entries(measurements)) {
+            for (const [key, value] of Object.entries(data.measurements)) {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'bg-gray-800 p-4 rounded-lg';
                 resultItem.innerHTML = `
@@ -605,6 +616,73 @@
                 `;
                 resultsGrid.appendChild(resultItem);
             }
+
+            // Display body type
+            document.getElementById('body-type-title').textContent = data.bodyType.type;
+            document.getElementById('body-type-description').textContent = data.bodyType.description;
+
+            // Display sports recommendations
+            const recommendedList = document.getElementById('recommended-sports-list');
+            recommendedList.innerHTML = data.sportsRecommendation.recommended.map(sport => `<li>${sport}</li>`).join('');
+            const cautionList = document.getElementById('caution-sports-list');
+            cautionList.innerHTML = data.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
+
+            // Draw annotated images
+            drawAnnotatedImages(data.coordinates);
+        }
+
+        function drawAnnotatedImages(coordinates) {
+            const canvases = {
+                front: document.getElementById('front-canvas'),
+                side: document.getElementById('side-canvas'),
+                back: document.getElementById('back-canvas')
+            };
+            const images = {
+                front: document.getElementById('front-preview'),
+                side: document.getElementById('side-preview'),
+                back: document.getElementById('back-preview')
+            };
+
+            Object.keys(canvases).forEach(key => {
+                const canvas = canvases[key];
+                const ctx = canvas.getContext('2d');
+                const img = images[key];
+                
+                const draw = () => {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                    ctx.lineWidth = Math.max(2, canvas.width / 200);
+
+                    for (const measurement in coordinates) {
+                        if (coordinates[measurement].image === key) {
+                            const points = coordinates[measurement].points;
+                            points.forEach(p => {
+                                ctx.beginPath();
+                                ctx.arc(p[0], p[1], Math.max(3, canvas.width / 100), 0, 2 * Math.PI);
+                                ctx.fill();
+                            });
+                            if (points.length > 1) {
+                                ctx.beginPath();
+                                ctx.moveTo(points[0][0], points[0][1]);
+                                for (let i = 1; i < points.length; i++) {
+                                    ctx.lineTo(points[i][0], points[i][1]);
+                                }
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                };
+
+                if (img.complete) {
+                    draw();
+                } else {
+                    img.onload = draw;
+                }
+            });
         }
 
     </script>
