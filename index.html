@@ -381,7 +381,9 @@
                 };
 
                 profileElement.querySelector('button').onclick = async () => {
-                    if (confirm(`Are you sure you want to delete the profile for ${profile.name}?`)) {
+                    // A simple confirm dialog for deletion
+                    const isConfirmed = confirm(`Are you sure you want to delete the profile for ${profile.name}?`);
+                    if (isConfirmed) {
                         try {
                             await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id));
                             loadProfiles(); // Refresh the list
