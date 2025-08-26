@@ -25,9 +25,10 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .landmark-canvas.active-canvas {
+        .calibration-canvas.active-canvas {
             border: 3px solid #4f46e5;
             box-shadow: 0 0 20px rgba(79, 70, 229, 0.7);
+            cursor: crosshair;
         }
     </style>
 </head>
@@ -63,9 +64,7 @@
                 <button id="go-to-new-profile-from-dashboard" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mb-6">
                     + Add New Profile
                 </button>
-                <div id="profile-list" class="space-y-3">
-                    <!-- Profiles will be loaded here -->
-                </div>
+                <div id="profile-list" class="space-y-3"></div>
             </div>
         </div>
 
@@ -78,7 +77,7 @@
                 <h2 class="text-3xl font-bold mb-6 text-center">Create New Profile</h2>
                 <form id="new-profile-form" class="space-y-4">
                     <input type="text" id="name" placeholder="Name" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <input type="text" id="sports" placeholder="Primary Sport (e.g., Running, Weightlifting)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="sports" placeholder="Primary Sport" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <input type="text" id="country" placeholder="Country" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <select id="gender" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                         <option value="" disabled selected>Select Gender</option>
@@ -89,9 +88,7 @@
                         <input type="number" id="height" placeholder="Height (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                         <input type="number" id="weight" placeholder="Weight (kg)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-transform transform hover:scale-105 shadow-lg mt-4">
-                        Save and Continue
-                    </button>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Continue</button>
                 </form>
             </div>
         </div>
@@ -101,19 +98,13 @@
             <!-- Left Panel -->
             <div class="w-full lg:w-1/3 space-y-6">
                  <div class="flex justify-between items-center">
-                    <button id="back-to-dashboard-from-main" class="text-gray-400 hover:text-white flex items-center gap-2">
-                        <i data-lucide="arrow-left"></i> Back to Profiles
-                    </button>
-                    <button id="sign-out-btn-2" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
-                        <i data-lucide="log-out"></i> Sign Out
-                    </button>
+                    <button id="back-to-dashboard-from-main" class="text-gray-400 hover:text-white flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Profiles</button>
+                    <button id="sign-out-btn-2" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="log-out"></i> Sign Out</button>
                 </div>
-                <!-- Profile Info -->
                 <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
                     <h3 class="text-2xl font-bold mb-4">Profile Details</h3>
                     <div id="profile-display" class="space-y-2 text-gray-300"></div>
                 </div>
-                <!-- Image Uploads -->
                 <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
                     <h3 class="text-2xl font-bold mb-4">Upload Images</h3>
                     <div class="space-y-4">
@@ -131,38 +122,32 @@
                         </div>
                     </div>
                 </div>
-                 <button id="analyze-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition-transform transform hover:scale-105 shadow-lg flex items-center justify-center gap-3 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                    <i data-lucide="scan-line"></i>
-                    Start Landmark Placement
-                </button>
+                 <button id="start-calibration-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Start Calibration</button>
             </div>
 
             <!-- Right Panel -->
             <div class="w-full lg:w-2/3">
-                <!-- Image Previews -->
+                 <div id="calibration-instructions" class="bg-indigo-900/50 p-4 rounded-lg text-center mb-4 hidden">
+                    <p class="text-lg font-semibold">Current Task: <span id="calibration-task-name" class="text-yellow-300"></span></p>
+                    <p class="text-sm text-gray-400">Click and drag to draw a line on the highlighted image.</p>
+                </div>
                 <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center"><img id="front-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Front+View" alt="Front Preview" class="object-cover w-full h-full rounded-xl"></div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center"><img id="side-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Side+View" alt="Side Preview" class="object-cover w-full h-full rounded-xl"></div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center"><img id="back-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Back+View" alt="Back Preview" class="object-cover w-full h-full rounded-xl"></div>
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
+                        <img id="front-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Front+View" alt="Front Preview" class="object-contain w-full h-full rounded-xl">
+                        <canvas id="front-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
+                    </div>
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
+                        <img id="side-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Side+View" alt="Side Preview" class="object-contain w-full h-full rounded-xl">
+                        <canvas id="side-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
+                    </div>
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
+                        <img id="back-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Back+View" alt="Back Preview" class="object-contain w-full h-full rounded-xl">
+                        <canvas id="back-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Landmark Placement Screen -->
-        <div id="landmark-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-4">
-            <div class="w-full max-w-5xl mx-auto">
-                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-3xl font-bold">Place Measurement Points</h2>
-                     <button id="cancel-landmark-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Cancel</button>
-                </div>
-                <div id="landmark-instructions" class="bg-indigo-900/50 p-4 rounded-lg text-center mb-4">
-                    <p class="text-lg font-semibold">Current Task: <span id="landmark-task-name" class="text-yellow-300"></span></p>
-                    <p class="text-sm text-gray-400">Click the indicated point on the highlighted image.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <canvas id="landmark-front-canvas" class="landmark-canvas w-full h-auto rounded-lg bg-gray-700 cursor-crosshair"></canvas>
-                    <canvas id="landmark-side-canvas" class="landmark-canvas w-full h-auto rounded-lg bg-gray-700 cursor-crosshair"></canvas>
-                    <canvas id="landmark-back-canvas" class="landmark-canvas w-full h-auto rounded-lg bg-gray-700 cursor-crosshair"></canvas>
+                <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
                 </div>
             </div>
         </div>
@@ -172,28 +157,12 @@
             <div class="w-full max-w-5xl mx-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-4xl font-bold">Analysis Report</h2>
-                    <button id="back-to-main-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
-                        <i data-lucide="arrow-left"></i> Back to Analysis
-                    </button>
+                    <button id="back-to-main-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Analysis</button>
                 </div>
-
-                <!-- Annotated Images -->
-                <section>
-                    <h3 class="text-2xl font-semibold mb-4">Annotated Images</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <canvas id="front-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
-                        <canvas id="side-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
-                        <canvas id="back-canvas" class="w-full h-auto rounded-lg bg-gray-700"></canvas>
-                    </div>
-                </section>
-
-                <!-- Measurements -->
                 <section>
                     <h3 class="text-2xl font-semibold mb-4 mt-6">Measurements</h3>
                     <div id="results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center"></div>
                 </section>
-
-                <!-- Body Type Analysis -->
                 <section>
                     <h3 class="text-2xl font-semibold mb-4 mt-6">Body Type Analysis</h3>
                     <div class="bg-gray-700 p-6 rounded-lg">
@@ -201,8 +170,6 @@
                         <p id="body-type-description" class="text-gray-300"></p>
                     </div>
                 </section>
-
-                <!-- Sports Recommendations -->
                 <section>
                     <h3 class="text-2xl font-semibold mb-4 mt-6">Sports Recommendations</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -255,7 +222,7 @@
         // --- App State ---
         let app, db, auth, userId;
         let currentProfile = null;
-        let landmarkState = {};
+        let calibrationState = {};
         
         // --- DOM Elements ---
         const screens = {
@@ -264,7 +231,6 @@
             dashboard: document.getElementById('profile-dashboard-screen'),
             newProfile: document.getElementById('new-profile-screen'),
             main: document.getElementById('main-analysis-screen'),
-            landmark: document.getElementById('landmark-screen'),
             report: document.getElementById('report-screen'),
         };
         const modal = document.getElementById('custom-modal');
@@ -273,8 +239,10 @@
         const profileList = document.getElementById('profile-list');
         const profileDisplay = document.getElementById('profile-display');
         const resultsGrid = document.getElementById('results-grid');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const landmarkTaskName = document.getElementById('landmark-task-name');
+        const startCalibrationBtn = document.getElementById('start-calibration-btn');
+        const calibrationInstructions = document.getElementById('calibration-instructions');
+        const calibrationTaskName = document.getElementById('calibration-task-name');
+        const analysisLoaderContainer = document.getElementById('analysis-loader-container');
 
         // --- Navigation & Modal ---
         function showScreen(screenName) {
@@ -298,10 +266,6 @@
             showScreen('dashboard');
         });
         document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
-        document.getElementById('cancel-landmark-btn').addEventListener('click', () => {
-            resetLandmarkState();
-            showScreen('main');
-        });
 
         // --- Initialization & Auth ---
         async function initialize() {
@@ -424,10 +388,10 @@
         
         function resetMainScreen() {
             profileDisplay.innerHTML = '';
-            document.getElementById('front-preview').src = 'https://placehold.co/300x400/1F2937/4B5563?text=Front+View';
-            document.getElementById('side-preview').src = 'https://placehold.co/300x400/1F2937/4B5563?text=Side+View';
-            document.getElementById('back-preview').src = 'https://placehold.co/300x400/1F2937/4B5563?text=Back+View';
-            ['front-image', 'side-image', 'back-image'].forEach(id => document.getElementById(id).value = '');
+            ['front', 'side', 'back'].forEach(key => {
+                document.getElementById(`${key}-preview`).src = `https://placehold.co/300x400/1F2937/4B5563?text=${key.charAt(0).toUpperCase() + key.slice(1)}+View`;
+                document.getElementById(`${key}-image`).value = '';
+            });
         }
 
         function setupImagePreview(inputId, previewId) {
@@ -446,160 +410,200 @@
         setupImagePreview('side-image', 'side-preview');
         setupImagePreview('back-image', 'back-preview');
 
-        // --- Landmark Placement Logic ---
-        const landmarksToPlace = [
-            { name: 'Top of Head', key: 'height_top', image: 'front' },
-            { name: 'Bottom of Feet', key: 'height_bottom', image: 'front' },
-            { name: 'Left Shoulder', key: 'shoulder_left', image: 'front' },
-            { name: 'Right Shoulder', key: 'shoulder_right', image: 'front' },
-            { name: 'Left side of Chest', key: 'chest_left', image: 'front' },
-            { name: 'Right side of Chest', key: 'chest_right', image: 'front' },
-            { name: 'Front of Chest', key: 'chest_front', image: 'side' },
-            { name: 'Back of Chest', key: 'chest_back', image: 'side' },
-            // ... add all other points here following the same structure
+        // --- Calibration Logic ---
+        const calibrationTasks = [
+            { name: 'Draw Height (Top to Bottom)', key: 'front_height', image: 'front' },
+            { name: 'Draw Arm Span (Fingertip to Fingertip)', key: 'front_arm_span', image: 'front' },
+            { name: 'Draw Height (Top to Bottom)', key: 'side_height', image: 'side' },
+            { name: 'Draw Height (Top to Bottom)', key: 'back_height', image: 'back' },
+            { name: 'Draw Arm Span (Fingertip to Fingertip)', key: 'back_arm_span', image: 'back' },
         ];
 
-        function resetLandmarkState() {
-            landmarkState = {
-                currentIndex: 0,
-                points: {},
-                canvases: {
-                    front: document.getElementById('landmark-front-canvas'),
-                    side: document.getElementById('landmark-side-canvas'),
-                    back: document.getElementById('landmark-back-canvas'),
-                }
-            };
-        }
-
-        function startLandmarkPlacement() {
-            resetLandmarkState();
-            setupLandmarkCanvases();
-            updateLandmarkInstructions();
-            showScreen('landmark');
-        }
-
-        function setupLandmarkCanvases() {
-            Object.keys(landmarkState.canvases).forEach(key => {
-                const canvas = landmarkState.canvases[key];
-                const img = document.getElementById(`${key}-preview`);
-                const ctx = canvas.getContext('2d');
-
-                const draw = () => {
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    ctx.drawImage(img, 0, 0);
-                }
-
-                if (img.complete) draw();
-                else img.onload = draw;
-
-                canvas.onclick = (e) => handleCanvasClick(e, key);
-            });
-        }
-
-        function handleCanvasClick(event, imageKey) {
-            const currentLandmark = landmarksToPlace[landmarkState.currentIndex];
-            if (currentLandmark.image !== imageKey) return; // Only allow clicks on the active canvas
-
-            const canvas = landmarkState.canvases[imageKey];
-            const rect = canvas.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (event.clientY - rect.top) * (canvas.height / rect.height);
-
-            landmarkState.points[currentLandmark.key] = { x, y };
-            drawPoint(canvas, x, y);
-
-            landmarkState.currentIndex++;
-
-            if (landmarkState.currentIndex >= landmarksToPlace.length) {
-                // All points placed, now run analysis
-                runAnalysisWithLandmarks();
-            } else {
-                updateLandmarkInstructions();
-            }
-        }
-        
-        function drawPoint(canvas, x, y) {
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
-            ctx.beginPath();
-            ctx.arc(x, y, Math.max(3, canvas.width / 100), 0, 2 * Math.PI);
-            ctx.fill();
-        }
-
-        function updateLandmarkInstructions() {
-            const currentLandmark = landmarksToPlace[landmarkState.currentIndex];
-            landmarkTaskName.textContent = currentLandmark.name;
-
-            Object.values(landmarkState.canvases).forEach(canvas => canvas.classList.remove('active-canvas'));
-            landmarkState.canvases[currentLandmark.image].classList.add('active-canvas');
-        }
-
-        analyzeBtn.addEventListener('click', () => {
-             if (!currentProfile) {
+        function startCalibration() {
+            if (!currentProfile) {
                 showModal("Please load or create a profile first.");
                 return;
             }
-            const frontFile = document.getElementById('front-image').files[0];
-            const sideFile = document.getElementById('side-image').files[0];
-            const backFile = document.getElementById('back-image').files[0];
-
-            if (!frontFile || !sideFile || !backFile) {
-                showModal("Please upload all three images for analysis.");
+            if (!document.getElementById('front-image').files[0] || !document.getElementById('side-image').files[0] || !document.getElementById('back-image').files[0]) {
+                showModal("Please upload all three images to begin calibration.");
                 return;
             }
-            startLandmarkPlacement();
-        });
 
-        async function runAnalysisWithLandmarks() {
-            showScreen('main'); // Go back to main screen to show loader
-            document.getElementById('image-previews').classList.add('hidden');
-            analysisLoaderContainer.classList.remove('hidden');
-            analyzeBtn.disabled = true;
-            analysisStatusText.textContent = "AI is calculating your report...";
+            calibrationState = {
+                currentIndex: 0,
+                lines: {},
+                canvases: {
+                    front: document.getElementById('front-calibration-canvas'),
+                    side: document.getElementById('side-calibration-canvas'),
+                    back: document.getElementById('back-calibration-canvas'),
+                },
+                isDrawing: false,
+                startPoint: null,
+            };
 
-            try {
-                const analysisResult = await getAiAnalysisWithLandmarks(landmarkState.points);
-                if (analysisResult && validateAnalysisResult(analysisResult)) {
-                    // We need to pass the user-placed coordinates to the report renderer
-                    analysisResult.coordinates = landmarkState.points; // This is a simplification
-                    displayReport(analysisResult);
-                    showScreen('report');
-                } else {
-                    showModal("The AI failed to calculate a valid report from the provided points.");
-                }
-            } catch (error) {
-                 console.error("Analysis with landmarks failed:", error);
-                 showModal("An unexpected error occurred during the final analysis.");
-            } finally {
-                document.getElementById('image-previews').classList.remove('hidden');
-                analysisLoaderContainer.classList.add('hidden');
-                analyzeBtn.disabled = false;
-            }
+            setupCalibrationCanvases();
+            updateCalibrationInstructions();
+            calibrationInstructions.classList.remove('hidden');
+        }
+        startCalibrationBtn.addEventListener('click', startCalibration);
+
+        function setupCalibrationCanvases() {
+            Object.keys(calibrationState.canvases).forEach(key => {
+                const canvas = calibrationState.canvases[key];
+                const img = document.getElementById(`${key}-preview`);
+                
+                const resizeCanvas = () => {
+                    canvas.width = img.clientWidth;
+                    canvas.height = img.clientHeight;
+                };
+                
+                img.onload = resizeCanvas;
+                if (img.complete) resizeCanvas();
+
+                canvas.onmousedown = (e) => handleCanvasMouseDown(e, key);
+                canvas.onmousemove = (e) => handleCanvasMouseMove(e, key);
+                canvas.onmouseup = (e) => handleCanvasMouseUp(e, key);
+                canvas.onmouseleave = () => { calibrationState.isDrawing = false; };
+            });
         }
         
-        async function getAiAnalysisWithLandmarks(points) {
-            // This prompt is now much simpler. It's a calculation and analysis task, not a vision task.
-            const prompt = `Act as an expert anthropometric analyst. Given the user's profile and a precise set of anatomical coordinates in pixels, calculate their body measurements and generate a full analysis report.
+        function updateCalibrationInstructions() {
+            if (calibrationState.currentIndex >= calibrationTasks.length) {
+                calibrationInstructions.innerHTML = '<p class="text-lg font-semibold text-green-400">Calibration Complete! Generating Report...</p>';
+                runAnalysisWithCalibratedRatios();
+                return;
+            }
+            const currentTask = calibrationTasks[calibrationState.currentIndex];
+            calibrationTaskName.textContent = currentTask.name;
+
+            Object.values(calibrationState.canvases).forEach(canvas => canvas.classList.remove('active-canvas'));
+            calibrationState.canvases[currentTask.image].classList.add('active-canvas');
+        }
+
+        function getCanvasCoords(event, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top,
+            };
+        }
+
+        function handleCanvasMouseDown(event, imageKey) {
+            const currentTask = calibrationTasks[calibrationState.currentIndex];
+            if (currentTask.image !== imageKey) return;
+            
+            calibrationState.isDrawing = true;
+            calibrationState.startPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
+        }
+
+        function handleCanvasMouseMove(event, imageKey) {
+            if (!calibrationState.isDrawing) return;
+            const currentTask = calibrationTasks[calibrationState.currentIndex];
+            if (currentTask.image !== imageKey) return;
+            
+            const canvas = calibrationState.canvases[imageKey];
+            const ctx = canvas.getContext('2d');
+            const currentPoint = getCanvasCoords(event, canvas);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(calibrationState.startPoint.x, calibrationState.startPoint.y);
+            ctx.lineTo(currentPoint.x, currentPoint.y);
+            ctx.stroke();
+        }
+
+        function handleCanvasMouseUp(event, imageKey) {
+            if (!calibrationState.isDrawing) return;
+            const currentTask = calibrationTasks[calibrationState.currentIndex];
+            if (currentTask.image !== imageKey) return;
+
+            calibrationState.isDrawing = false;
+            const endPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
+            calibrationState.lines[currentTask.key] = { start: calibrationState.startPoint, end: endPoint };
+            
+            calibrationState.currentIndex++;
+            updateCalibrationInstructions();
+        }
+
+        async function runAnalysisWithCalibratedRatios() {
+            analysisLoaderContainer.classList.remove('hidden');
+            startCalibrationBtn.disabled = true;
+
+            try {
+                // Calculate ratios
+                const frontHeightPixels = Math.abs(calibrationState.lines.front_height.start.y - calibrationState.lines.front_height.end.y);
+                const yRatio = currentProfile.height / frontHeightPixels; // cm per pixel (vertical)
+
+                const frontArmSpanPixels = Math.abs(calibrationState.lines.front_arm_span.start.x - calibrationState.lines.front_arm_span.end.x);
+                // Assuming arm span is roughly equal to height for x-axis calibration
+                const xRatio = currentProfile.height / frontArmSpanPixels; // cm per pixel (horizontal)
+
+                const sideHeightPixels = Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y);
+                const zRatio = (currentProfile.height / sideHeightPixels) * 0.3; // Depth is an estimate, scaling it down
+
+                const ratios = { yRatio, xRatio, zRatio };
+                console.log("Calculated Ratios:", ratios);
+
+                const analysisResult = await getAiAnalysisWithRatios(ratios);
+                if (analysisResult) {
+                     displayReport(analysisResult);
+                     showScreen('report');
+                } else {
+                    showModal("The AI failed to calculate a valid report using the calibrated ratios.");
+                }
+
+            } catch (error) {
+                 console.error("Analysis with ratios failed:", error);
+                 showModal("An unexpected error occurred during the final analysis.");
+            } finally {
+                analysisLoaderContainer.classList.add('hidden');
+                startCalibrationBtn.disabled = false;
+                calibrationInstructions.classList.add('hidden');
+                 Object.values(calibrationState.canvases).forEach(canvas => {
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    canvas.classList.remove('active-canvas');
+                 });
+            }
+        }
+
+        async function getAiAnalysisWithRatios(ratios) {
+             const prompt = `Act as an expert anthropometric analyst. I have provided you with three images and precise pixel-to-centimeter ratios for the X, Y, and Z axes. Your task is to use these ratios to calculate body measurements and generate a full analysis report.
 
             **Critical Instructions:**
-            1.  **Calibrate:** Use the coordinates for 'height_top' and 'height_bottom' to find the pixel height. Use this and the user's real-world height (${currentProfile.height} cm) to calculate a precise pixel-to-cm ratio.
-            2.  **Calculate Measurements:** Use the pixel-to-cm ratio to convert all other provided pixel coordinates into real-world centimeter measurements. For circumferences, estimate them based on the provided widths and depths.
-            3.  **Analyze Physique:** Based on the final calculated measurements, determine the user's somatotype (Ectomorph, Mesomorph, Endomorph, or a combination) and suggest suitable sports.
-            4.  **JSON Output:** Return ONLY a single JSON object containing the final measurements, body type analysis, and sports recommendations.
+            1.  **Use Provided Ratios:** You MUST use the following ratios for all calculations. Do NOT attempt to recalibrate.
+                - Y-axis (Vertical): ${ratios.yRatio.toFixed(4)} cm/pixel
+                - X-axis (Horizontal): ${ratios.xRatio.toFixed(4)} cm/pixel
+                - Z-axis (Depth): ${ratios.zRatio.toFixed(4)} cm/pixel
+            2.  **Measure in Pixels:** For each required measurement, identify the anatomical landmarks on the images and measure the corresponding widths, heights, and depths in PIXELS.
+            3.  **Convert to CM:** Use the provided ratios to convert all pixel measurements into final centimeter values.
+            4.  **Analyze Physique & Recommend:** Based on the final calculated measurements, determine the user's somatotype and suggest suitable sports.
+            5.  **JSON Output:** Return ONLY a single JSON object with the final measurements, body type analysis, and sports recommendations.
 
             **User Profile:**
             - Height: ${currentProfile.height} cm
             - Weight: ${currentProfile.weight} kg
             - Gender: ${currentProfile.gender}
 
-            **User-Provided Pixel Coordinates:**
-            ${JSON.stringify(points, null, 2)}
-
-            Begin the calculations now and return only the final JSON output.`;
+            Begin the analysis now.`;
+            
+            const [frontData, sideData, backData] = await Promise.all([
+                resizeAndEncodeImage(document.getElementById('front-image').files[0]),
+                resizeAndEncodeImage(document.getElementById('side-image').files[0]),
+                resizeAndEncodeImage(document.getElementById('back-image').files[0])
+            ]);
 
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: frontData.mimeType, data: frontData.base64 } },
+                        { inlineData: { mimeType: sideData.mimeType, data: sideData.base64 } },
+                        { inlineData: { mimeType: backData.mimeType, data: backData.base64 } }
+                    ]
+                }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     temperature: 0,
@@ -647,49 +651,22 @@
             const cautionList = document.getElementById('caution-sports-list');
             cautionList.innerHTML = data.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
 
-            // The coordinates for drawing are now from the landmarkState, not the AI response
-            drawAnnotatedImages(landmarkState.points);
-        }
-
-        function drawAnnotatedImages(coordinates) {
-            const canvases = {
+            // This part needs to be re-thought as the AI doesn't return coordinates anymore
+            // For now, we just show the un-annotated images in the report
+            const reportCanvases = {
                 front: document.getElementById('front-canvas'),
                 side: document.getElementById('side-canvas'),
                 back: document.getElementById('back-canvas')
             };
-            const images = {
-                front: document.getElementById('front-preview'),
-                side: document.getElementById('side-preview'),
-                back: document.getElementById('back-preview')
-            };
-
-            Object.keys(canvases).forEach(key => {
-                const canvas = canvases[key];
+            Object.keys(reportCanvases).forEach(key => {
+                const canvas = reportCanvases[key];
+                const img = document.getElementById(`${key}-preview`);
                 const ctx = canvas.getContext('2d');
-                const img = images[key];
-                
                 const draw = () => {
                     canvas.width = img.naturalWidth;
                     canvas.height = img.naturalHeight;
                     ctx.drawImage(img, 0, 0);
-
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
-                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-                    ctx.lineWidth = Math.max(2, canvas.width / 200);
-
-                    // This logic needs to be adapted to draw lines between the correct points
-                    // For now, it just draws the points placed by the user
-                    for (const pointKey in coordinates) {
-                         const landmarkDef = landmarksToPlace.find(l => l.key === pointKey);
-                         if (landmarkDef && landmarkDef.image === key) {
-                            const point = coordinates[pointKey];
-                            ctx.beginPath();
-                            ctx.arc(point.x, point.y, Math.max(3, canvas.width / 100), 0, 2 * Math.PI);
-                            ctx.fill();
-                         }
-                    }
                 };
-
                 if (img.complete) draw();
                 else img.onload = draw;
             });
