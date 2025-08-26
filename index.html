@@ -347,7 +347,11 @@
                 await signInWithPopup(auth, provider);
             } catch (error) {
                 console.error("Google Sign-In Error:", error.code, error.message);
-                showModal("Could not sign in with Google. Please try again.");
+                if (error.code === 'auth/unauthorized-domain') {
+                    showModal("Sign-in failed: This app's domain is not authorized. Please add your domain (e.g., localhost or your github.io URL) to the Firebase console under Authentication -> Settings -> Authorized domains.");
+                } else {
+                    showModal("Could not sign in with Google. Please try again.");
+                }
             }
         }
 
