@@ -25,10 +25,11 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .calibration-canvas.active-canvas {
-            border: 3px solid #4f46e5;
-            box-shadow: 0 0 20px rgba(79, 70, 229, 0.7);
-            cursor: crosshair;
+        /* Removed calibration-canvas styles as they are no longer needed for drawing */
+        .preview-canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
     </style>
 </head>
@@ -36,11 +37,13 @@
 
     <div id="app-container" class="w-full max-w-6xl mx-auto bg-gray-800 rounded-2xl shadow-2xl overflow-hidden relative pb-12">
 
+        <!-- Loading Screen -->
         <div id="loading-screen" class="screen active flex-col items-center justify-center h-[80vh]">
             <div class="loader"></div>
             <p class="mt-4 text-lg text-gray-400">Initializing AI Analysis Engine...</p>
         </div>
 
+        <!-- Login Screen -->
         <div id="login-screen" class="screen flex-col items-center justify-center h-[80vh] p-8 text-center">
             <h1 class="text-5xl font-bold text-white mb-4">Body Composition AI</h1>
             <p class="text-xl text-gray-400 mb-12 max-w-2xl">Sign in with your Google account to save and manage your personal body measurement profiles.</p>
@@ -50,6 +53,7 @@
             </button>
         </div>
 
+        <!-- Profile Dashboard Screen -->
         <div id="profile-dashboard-screen" class="screen flex-col items-center justify-start h-auto min-h-[80vh] p-8">
              <div class="w-full max-w-3xl">
                 <div class="flex justify-between items-center mb-6">
@@ -65,6 +69,7 @@
             </div>
         </div>
 
+        <!-- New Profile Screen -->
         <div id="new-profile-screen" class="screen flex-col items-center justify-center h-auto p-8">
             <div class="w-full max-w-lg">
                 <button id="back-to-dashboard-from-new" class="mb-6 text-gray-400 hover:text-white flex items-center gap-2">
@@ -80,17 +85,18 @@
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                     </select>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <input type="number" id="height" placeholder="Height (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                         <input type="number" id="weight" placeholder="Weight (kg)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
-                        <input type="number" id="shoulderWidth" placeholder="Shoulder Width (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                     </div>
                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Continue</button>
                 </form>
             </div>
         </div>
 
+        <!-- Main Analysis Screen -->
         <div id="main-analysis-screen" class="screen flex-col lg:flex-row p-8 gap-8 h-auto min-h-[80vh]">
+            <!-- Left Panel -->
             <div class="w-full lg:w-1/3 space-y-6">
                  <div class="flex justify-between items-center">
                     <button id="back-to-dashboard-from-main" class="text-gray-400 hover:text-white flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Profiles</button>
@@ -117,31 +123,22 @@
                         </div>
                     </div>
                 </div>
-                 <button id="start-calibration-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Start Calibration</button>
+                 <!-- UPDATED: Button text changed to reflect new auto-calibration flow -->
+                 <button id="start-analysis-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Analyze Body</button>
             </div>
 
+            <!-- Right Panel -->
             <div class="w-full lg:w-2/3">
-                 <div id="calibration-instructions" class="bg-indigo-900/50 p-4 rounded-lg text-center mb-4 hidden">
-                    <div class="flex justify-between items-center">
-                        <div class="text-left">
-                            <p class="text-lg font-semibold">Current Task: <span id="calibration-task-name" class="text-yellow-300"></span></p>
-                            <p class="text-sm text-gray-400">Click and drag to draw a line on the highlighted image.</p>
-                        </div>
-                        <button id="redraw-last-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-lg text-sm flex items-center gap-2"><i data-lucide="undo-2"></i> Redraw Last</button>
+                 <!-- REMOVED: Calibration instructions are no longer needed -->
+                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
+                        <canvas id="front-canvas" class="preview-canvas rounded-xl"></canvas>
                     </div>
-                </div>
-                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
-                        <img id="front-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Front+View" alt="Front Preview" class="object-contain w-full h-full rounded-xl">
-                        <canvas id="front-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
+                        <canvas id="side-canvas" class="preview-canvas rounded-xl"></canvas>
                     </div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
-                        <img id="side-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Side+View" alt="Side Preview" class="object-contain w-full h-full rounded-xl">
-                        <canvas id="side-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
-                    </div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center relative">
-                        <img id="back-preview" src="https://placehold.co/300x400/1F2937/4B5563?text=Back+View" alt="Back Preview" class="object-contain w-full h-full rounded-xl">
-                        <canvas id="back-calibration-canvas" class="calibration-canvas absolute top-0 left-0 w-full h-full"></canvas>
+                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
+                        <canvas id="back-canvas" class="preview-canvas rounded-xl"></canvas>
                     </div>
                 </div>
                 <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full">
@@ -151,6 +148,7 @@
             </div>
         </div>
         
+        <!-- Detailed Report Screen -->
         <div id="report-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-6">
             <div class="w-full max-w-5xl mx-auto">
                 <div class="flex justify-between items-center mb-6">
@@ -195,6 +193,7 @@
         </footer>
     </div>
 
+    <!-- Custom Modal -->
     <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-700 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-gray-600">
             <p id="modal-message" class="mb-6 text-lg">Message goes here.</p>
@@ -205,12 +204,10 @@
     </div>
 
     <script type="module">
-        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Configuration ---
         const firebaseConfig = {
             apiKey: "AIzaSyBjU3yOJUIrN_cWsSdjyV067jWLGPsjHUI",
             authDomain: "body-analyser8860.firebaseapp.com",
@@ -221,27 +218,14 @@
             measurementId: "G-6YF20DVRZE"
         };
         
-        // !!! IMPORTANT SECURITY WARNING !!!
-        // DO NOT expose your secret API keys in client-side code in a real application.
-        // This key can be stolen and used by others, leading to unexpected charges.
-        // For production, use a backend service (like a Cloud Function) to make API calls.
         const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
-        // --- App State ---
         let app, db, auth, userId;
         let currentProfile = null;
-        let calibrationState = {};
         let lastCalculatedMeasurements = null;
+        const imageState = { front: null, side: null, back: null };
         
-        // --- DOM Elements ---
-        const screens = {
-            loading: document.getElementById('loading-screen'),
-            login: document.getElementById('login-screen'),
-            dashboard: document.getElementById('profile-dashboard-screen'),
-            newProfile: document.getElementById('new-profile-screen'),
-            main: document.getElementById('main-analysis-screen'),
-            report: document.getElementById('report-screen'),
-        };
+        const screens = { loading: document.getElementById('loading-screen'), login: document.getElementById('login-screen'), dashboard: document.getElementById('profile-dashboard-screen'), newProfile: document.getElementById('new-profile-screen'), main: document.getElementById('main-analysis-screen'), report: document.getElementById('report-screen'), };
         const modal = document.getElementById('custom-modal');
         const modalMessage = document.getElementById('modal-message');
         const modalButtons = document.getElementById('modal-buttons');
@@ -249,640 +233,163 @@
         const profileList = document.getElementById('profile-list');
         const profileDisplay = document.getElementById('profile-display');
         const resultsGrid = document.getElementById('results-grid');
-        const startCalibrationBtn = document.getElementById('start-calibration-btn');
-        const calibrationInstructions = document.getElementById('calibration-instructions');
-        const calibrationTaskName = document.getElementById('calibration-task-name');
         const analysisLoaderContainer = document.getElementById('analysis-loader-container');
         const analysisStatusText = document.getElementById('analysis-status-text');
-        const redrawLastBtn = document.getElementById('redraw-last-btn');
         const getInDepthAnalysisBtn = document.getElementById('get-in-depth-analysis-btn');
         const inDepthLoader = document.getElementById('in-depth-loader');
         const inDepthContent = document.getElementById('in-depth-content');
 
-        // --- Navigation & Modal ---
-        function showScreen(screenName) {
-            Object.values(screens).forEach(screen => screen.classList.remove('active'));
-            screens[screenName].classList.add('active');
-        }
-        function showModal(message, onConfirm) {
-            modalMessage.textContent = message;
-            modalButtons.innerHTML = ''; // Clear previous buttons
+        function showScreen(screenName) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[screenName].classList.add('active'); }
+        function showModal(message, onConfirm) { modalMessage.textContent = message; modalButtons.innerHTML = ''; if (onConfirm) { const cBtn = document.createElement('button'); cBtn.textContent = 'Confirm'; cBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg'; cBtn.onclick = () => { onConfirm(); modal.style.display = 'none'; }; modalButtons.appendChild(cBtn); const aBtn = document.createElement('button'); aBtn.textContent = 'Cancel'; aBtn.className = 'bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg'; aBtn.onclick = () => { modal.style.display = 'none'; }; modalButtons.appendChild(aBtn); } else { const okBtn = document.createElement('button'); okBtn.textContent = 'OK'; okBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg'; okBtn.onclick = () => { modal.style.display = 'none'; }; modalButtons.appendChild(okBtn); } modal.style.display = 'flex'; }
 
-            if (onConfirm) {
-                const confirmBtn = document.createElement('button');
-                confirmBtn.textContent = 'Confirm';
-                confirmBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg';
-                confirmBtn.onclick = () => {
-                    onConfirm();
-                    modal.style.display = 'none';
-                };
-                modalButtons.appendChild(confirmBtn);
-
-                const cancelBtn = document.createElement('button');
-                cancelBtn.textContent = 'Cancel';
-                cancelBtn.className = 'bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg';
-                cancelBtn.onclick = () => {
-                    modal.style.display = 'none';
-                };
-                modalButtons.appendChild(cancelBtn);
-            } else {
-                const okBtn = document.createElement('button');
-                okBtn.textContent = 'OK';
-                okBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg';
-                okBtn.onclick = () => {
-                    modal.style.display = 'none';
-                };
-                modalButtons.appendChild(okBtn);
-            }
-            modal.style.display = 'flex';
-        }
-
-        // --- Event Listeners ---
         document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
         document.querySelectorAll('.sign-out-btn').forEach(btn => btn.addEventListener('click', handleSignOut));
         document.getElementById('go-to-new-profile-from-dashboard').addEventListener('click', () => showScreen('newProfile'));
         document.getElementById('back-to-dashboard-from-new').addEventListener('click', () => showScreen('dashboard'));
-        document.getElementById('back-to-dashboard-from-main').addEventListener('click', () => {
-            resetMainScreen();
-            showScreen('dashboard');
-        });
+        document.getElementById('back-to-dashboard-from-main').addEventListener('click', () => { resetMainScreen(); showScreen('dashboard'); });
         document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
-        redrawLastBtn.addEventListener('click', handleRedrawLast);
+        document.getElementById('start-analysis-btn').addEventListener('click', runAutomatedAnalysis);
         getInDepthAnalysisBtn.addEventListener('click', handleInDepthAnalysis);
 
+        async function initialize() { try { app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); onAuthStateChanged(auth, (user) => { if (user) { userId = user.uid; loadProfiles(); showScreen('dashboard'); } else { userId = null; currentProfile = null; showScreen('login'); } }); } catch (error) { console.error("Firebase init failed:", error); screens.loading.innerHTML = `<p class="text-red-500">Connection Error.</p>`; } }
+        async function handleGoogleLogin() { const provider = new GoogleAuthProvider(); try { await signInWithPopup(auth, provider); } catch (error) { console.error("Sign-In Error:", error); showModal("Could not sign in."); } }
+        async function handleSignOut() { try { await signOut(auth); } catch (error) { console.error("Sign Out Error:", error); } }
 
-        // --- Initialization & Auth ---
-        async function initialize() {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        loadProfiles();
-                        showScreen('dashboard');
-                    } else {
-                        userId = null;
-                        currentProfile = null;
-                        showScreen('login');
-                    }
-                });
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                screens.loading.innerHTML = `<p class="text-red-500">Error: Could not connect to the service.</p>`;
-            }
-        }
+        function drawPlaceholderOnCanvas(canvasKey, text) { const canvas = document.getElementById(`${canvasKey}-canvas`); if (!canvas) return; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#4B5563'; ctx.font = 'bold 20px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, canvas.width / 2, canvas.height / 2); }
+        function renderImageOnCanvas(canvasKey) { const canvas = document.getElementById(`${canvasKey}-canvas`); const image = imageState[canvasKey]; if (!canvas || !image) { drawPlaceholderOnCanvas(canvasKey, `${canvasKey.charAt(0).toUpperCase() + canvasKey.slice(1)} View`); return; } const ctx = canvas.getContext('2d'); const canvasRatio = canvas.width / canvas.height; const imageRatio = image.width / image.height; let dw, dh, x, y; if (canvasRatio > imageRatio) { dh = canvas.height; dw = dh * imageRatio; x = (canvas.width - dw) / 2; y = 0; } else { dw = canvas.width; dh = dw / imageRatio; x = 0; y = (canvas.height - dh) / 2; } ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, x, y, dw, dh); }
 
-        async function handleGoogleLogin() {
-            const provider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Google Sign-In Error:", error.code, error.message);
-                if (error.code === 'auth/unauthorized-domain') {
-                    showModal("Sign-in failed: This app's domain is not authorized. Please add your domain (e.g., localhost or your github.io URL) to the Firebase console under Authentication -> Settings -> Authorized domains.");
-                } else {
-                    showModal("Could not sign in with Google. Please try again.");
-                }
-            }
-        }
-
-        async function handleSignOut() {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("Sign Out Error:", error);
-            }
-        }
-        
         window.onload = () => {
             lucide.createIcons();
             initialize();
+            ['front', 'side', 'back'].forEach(key => {
+                const canvas = document.getElementById(`${key}-canvas`);
+                const parent = canvas.parentElement;
+                const resizeCanvas = () => { canvas.width = parent.clientWidth; canvas.height = parent.clientHeight; renderImageOnCanvas(key); };
+                new ResizeObserver(resizeCanvas).observe(parent);
+                resizeCanvas();
+            });
         };
 
-        // --- Profile Management ---
-        newProfileForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!userId) {
-                showModal("You must be signed in to create a profile.");
+        newProfileForm.addEventListener('submit', async (e) => { e.preventDefault(); if (!userId) { showModal("You must be signed in."); return; } const profileData = { name: document.getElementById('name').value, sports: document.getElementById('sports').value, country: document.getElementById('country').value, gender: document.getElementById('gender').value, height: parseFloat(document.getElementById('height').value), weight: parseFloat(document.getElementById('weight').value), }; try { const appId = 'body-measurement-app'; const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData); currentProfile = { id: docRef.id, ...profileData }; updateMainScreen(); showScreen('main'); newProfileForm.reset(); } catch (error) { console.error("Error adding document: ", error); showModal("Failed to save profile."); } });
+        async function loadProfiles() { if (!userId) return; const appId = 'body-measurement-app'; const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`); const q = query(profilesCol); const profileSnapshot = await getDocs(q); profileList.innerHTML = profileSnapshot.empty ? '<p class="text-center text-gray-500">No profiles found.</p>' : ''; profileSnapshot.forEach((doc) => { const profile = { id: doc.id, ...doc.data() }; const pElem = document.createElement('div'); pElem.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center'; pElem.innerHTML = `<div class="cursor-pointer flex-grow"><p class="font-bold text-lg">${profile.name}</p><p class="text-sm text-gray-400">${profile.sports || 'N/A'}</p></div><button class="delete-profile-btn text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>`; pElem.querySelector('.cursor-pointer').onclick = () => { currentProfile = profile; updateMainScreen(); showScreen('main'); }; pElem.querySelector('.delete-profile-btn').onclick = () => { showModal(`Delete profile for ${profile.name}?`, async () => { try { await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id)); loadProfiles(); } catch (error) { console.error("Error deleting profile:", error); showModal("Failed to delete profile."); } }); }; profileList.appendChild(pElem); }); lucide.createIcons(); }
+
+        function updateMainScreen() { if (!currentProfile) return; profileDisplay.innerHTML = `<p><strong>Name:</strong> ${currentProfile.name}</p><p><strong>Height:</strong> ${currentProfile.height} cm</p><p><strong>Weight:</strong> ${currentProfile.weight} kg</p>`; }
+        function resetMainScreen() { profileDisplay.innerHTML = ''; ['front', 'side', 'back'].forEach(key => { imageState[key] = null; document.getElementById(`${key}-image`).value = ''; renderImageOnCanvas(key); }); }
+        function setupImagePreview(inputId, canvasKey) { document.getElementById(inputId).addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) { imageState[canvasKey] = null; renderImageOnCanvas(canvasKey); return; } const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { imageState[canvasKey] = img; renderImageOnCanvas(canvasKey); }; img.src = e.target.result; }; reader.readAsDataURL(file); }); }
+        setupImagePreview('front-image', 'front');
+        setupImagePreview('side-image', 'side');
+        setupImagePreview('back-image', 'back');
+
+        // --- NEW: Automated Analysis Flow ---
+        async function runAutomatedAnalysis() {
+            if (!currentProfile || !imageState.front || !imageState.side || !imageState.back) {
+                showModal("Please create a profile and upload all three images to begin analysis.");
                 return;
             }
-            const profileData = {
-                name: document.getElementById('name').value,
-                sports: document.getElementById('sports').value,
-                country: document.getElementById('country').value,
-                gender: document.getElementById('gender').value,
-                height: parseFloat(document.getElementById('height').value),
-                weight: parseFloat(document.getElementById('weight').value),
-                shoulderWidth: parseFloat(document.getElementById('shoulderWidth').value),
-            };
-            try {
-                const appId = 'body-measurement-app';
-                const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData);
-                currentProfile = { id: docRef.id, ...profileData };
-                updateMainScreen();
-                showScreen('main');
-                newProfileForm.reset();
-            } catch (error) {
-                console.error("Error adding document: ", error);
-                showModal("Failed to save profile. Please ensure your Firestore security rules are set up correctly.");
-            }
-        });
-
-        async function loadProfiles() {
-            if (!userId) return;
-            const appId = 'body-measurement-app';
-            const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`);
-            const q = query(profilesCol);
-            const profileSnapshot = await getDocs(q);
-            profileList.innerHTML = '';
-            if (profileSnapshot.empty) {
-                profileList.innerHTML = '<p class="text-center text-gray-500">No profiles found.</p>';
-                return;
-            }
-            profileSnapshot.forEach((doc) => {
-                const profile = { id: doc.id, ...doc.data() };
-                const profileElement = document.createElement('div');
-                profileElement.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center';
-                profileElement.innerHTML = `
-                    <div class="cursor-pointer flex-grow" data-profile-id="${profile.id}">
-                        <p class="font-bold text-lg">${profile.name}</p>
-                        <p class="text-sm text-gray-400">${profile.sports || 'N/A'} | ${profile.country || 'N/A'}</p>
-                    </div>
-                    <button data-delete-id="${profile.id}" class="delete-profile-btn text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>
-                `;
-                
-                profileElement.querySelector('.cursor-pointer').onclick = () => {
-                    currentProfile = profile;
-                    updateMainScreen();
-                    showScreen('main');
-                };
-
-                profileElement.querySelector('.delete-profile-btn').onclick = () => {
-                    showModal(`Are you sure you want to delete the profile for ${profile.name}?`, async () => {
-                         try {
-                            await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id));
-                            loadProfiles(); // Refresh the list
-                        } catch (error) {
-                            console.error("Error deleting profile:", error);
-                            showModal("Failed to delete profile. Please ensure your Firestore security rules are set up correctly to allow deletion.");
-                        }
-                    });
-                };
-
-                profileList.appendChild(profileElement);
-            });
-            lucide.createIcons();
-        }
-
-        // --- Main Screen Logic ---
-        function updateMainScreen() {
-            if (!currentProfile) return;
-            profileDisplay.innerHTML = `
-                <p><strong>Name:</strong> ${currentProfile.name}</p>
-                <p><strong>Sport:</strong> ${currentProfile.sports}</p>
-                <p><strong>Country:</strong> ${currentProfile.country}</p>
-                <p><strong>Gender:</strong> ${currentProfile.gender}</p>
-                <p><strong>Height:</strong> ${currentProfile.height} cm</p>
-                <p><strong>Weight:</strong> ${currentProfile.weight} kg</p>
-                <p><strong>Shoulder Width:</strong> ${currentProfile.shoulderWidth} cm</p>
-            `;
-        }
-        
-        function resetMainScreen() {
-            profileDisplay.innerHTML = '';
-            ['front', 'side', 'back'].forEach(key => {
-                document.getElementById(`${key}-preview`).src = `https://placehold.co/300x400/1F2937/4B5563?text=${key.charAt(0).toUpperCase() + key.slice(1)}+View`;
-                document.getElementById(`${key}-image`).value = '';
-            });
-        }
-
-        function setupImagePreview(inputId, previewId) {
-            document.getElementById(inputId).addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        document.getElementById(previewId).src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        setupImagePreview('front-image', 'front-preview');
-        setupImagePreview('side-image', 'side-preview');
-        setupImagePreview('back-image', 'back-preview');
-
-        // --- Calibration Logic ---
-        const calibrationTasks = [
-            { name: 'Draw Height (Top to Bottom)', key: 'front_height', image: 'front' },
-            { name: 'Draw Shoulder Width (Bone to Bone)', key: 'front_shoulder_width', image: 'front' },
-            { name: 'Draw Height (Top to Bottom)', key: 'side_height', image: 'side' },
-            { name: 'Draw Chest Depth (Front to Back)', key: 'side_depth', image: 'side' },
-            { name: 'Draw Height (Top to Bottom)', key: 'back_height', image: 'back' },
-            { name: 'Draw Shoulder Width (Bone to Bone)', key: 'back_shoulder_width', image: 'back' },
-        ];
-
-        function startCalibration() {
-            if (!currentProfile) {
-                showModal("Please load or create a profile first.");
-                return;
-            }
-            if (!document.getElementById('front-image').files[0] || !document.getElementById('side-image').files[0] || !document.getElementById('back-image').files[0]) {
-                showModal("Please upload all three images to begin calibration.");
-                return;
-            }
-
-            calibrationState = {
-                currentIndex: 0,
-                lines: {},
-                canvases: {
-                    front: document.getElementById('front-calibration-canvas'),
-                    side: document.getElementById('side-calibration-canvas'),
-                    back: document.getElementById('back-calibration-canvas'),
-                },
-                isDrawing: false,
-                startPoint: null,
-            };
-
-            setupCalibrationCanvases();
-            updateCalibrationInstructions();
-            calibrationInstructions.classList.remove('hidden');
-        }
-        startCalibrationBtn.addEventListener('click', startCalibration);
-
-        function setupCalibrationCanvases() {
-            Object.keys(calibrationState.canvases).forEach(key => {
-                const canvas = calibrationState.canvases[key];
-                const img = document.getElementById(`${key}-preview`);
-                
-                // FIXED: Use ResizeObserver for robust canvas sizing
-                const resizeCanvas = () => {
-                    canvas.width = img.clientWidth;
-                    canvas.height = img.clientHeight;
-                    redrawLinesForCanvas(key);
-                };
-                
-                new ResizeObserver(resizeCanvas).observe(img);
-                if (img.complete) resizeCanvas();
-
-                canvas.onmousedown = (e) => handleCanvasMouseDown(e, key);
-                canvas.onmousemove = (e) => handleCanvasMouseMove(e, key);
-                canvas.onmouseup = (e) => handleCanvasMouseUp(e, key);
-                canvas.onmouseleave = () => { 
-                    if (calibrationState.isDrawing) {
-                        calibrationState.isDrawing = false;
-                        redrawLinesForCanvas(key);
-                    } 
-                };
-            });
-        }
-        
-        function updateCalibrationInstructions() {
-            redrawLastBtn.style.display = calibrationState.currentIndex > 0 ? 'flex' : 'none';
-            if (calibrationState.currentIndex >= calibrationTasks.length) {
-                calibrationInstructions.innerHTML = '<p class="text-lg font-semibold text-green-400">Calibration Complete! Generating Report...</p>';
-                runAnalysisWithCalibratedRatios();
-                return;
-            }
-            const currentTask = calibrationTasks[calibrationState.currentIndex];
-            calibrationTaskName.textContent = currentTask.name;
-
-            Object.values(calibrationState.canvases).forEach(canvas => canvas.classList.remove('active-canvas'));
-            calibrationState.canvases[currentTask.image].classList.add('active-canvas');
-        }
-
-        function getCanvasCoords(event, canvas) {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top,
-            };
-        }
-
-        function handleCanvasMouseDown(event, imageKey) {
-            const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
-            
-            calibrationState.isDrawing = true;
-            calibrationState.startPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
-        }
-
-        function handleCanvasMouseMove(event, imageKey) {
-            if (!calibrationState.isDrawing) return;
-            const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
-            
-            const canvas = calibrationState.canvases[imageKey];
-            const currentPoint = getCanvasCoords(event, canvas);
-            
-            redrawLinesForCanvas(imageKey); // FIXED: Efficiently redraw all lines
-            drawLine(canvas, calibrationState.startPoint, currentPoint, true); // Draw temporary line
-        }
-
-        function handleCanvasMouseUp(event, imageKey) {
-            if (!calibrationState.isDrawing) return;
-            const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
-
-            calibrationState.isDrawing = false;
-            const endPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
-            calibrationState.lines[currentTask.key] = { start: calibrationState.startPoint, end: endPoint };
-            
-            redrawLinesForCanvas(imageKey); // Final draw of the new line
-            calibrationState.currentIndex++;
-            updateCalibrationInstructions();
-        }
-
-        function handleRedrawLast() {
-            if (calibrationState.currentIndex === 0) return;
-
-            calibrationState.currentIndex--;
-            const lastTask = calibrationTasks[calibrationState.currentIndex];
-            const imageKeyToClear = lastTask.image;
-            delete calibrationState.lines[lastTask.key];
-
-            redrawLinesForCanvas(imageKeyToClear);
-            updateCalibrationInstructions();
-        }
-
-        // FIXED: More robust redrawing logic
-        function redrawLinesForCanvas(imageKey) {
-            const canvas = calibrationState.canvases[imageKey];
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const key in calibrationState.lines) {
-                const task = calibrationTasks.find(t => t.key === key);
-                if (task && task.image === imageKey) {
-                    const line = calibrationState.lines[key];
-                    drawLine(canvas, line.start, line.end);
-                }
-            }
-        }
-        
-        function drawLine(canvas, start, end, isTemporary = false) {
-            const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = isTemporary ? 'rgba(79, 70, 229, 0.9)' : 'rgba(255, 255, 0, 0.8)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.stroke();
-        }
-        
-        // --- AI & Calculation Functions ---
-        
-        async function runAnalysisWithCalibratedRatios() {
-            analysisLoaderContainer.classList.remove('hidden');
-            startCalibrationBtn.disabled = true;
-            analysisStatusText.textContent = "Locating measurement points...";
+            analysisLoaderContainer.style.display = 'flex';
+            document.getElementById('image-previews').style.display = 'none';
+            analysisStatusText.textContent = "Analyzing body landmarks...";
 
             try {
-                // FIXED: Use Pythagorean theorem for correct pixel distance
-                const getPixelLength = (line) => {
-                    if (!line) return 0;
-                    const dx = line.start.x - line.end.x;
-                    const dy = line.start.y - line.end.y;
-                    return Math.sqrt(dx * dx + dy * dy);
-                };
-
-                const getRatio = (realCm, pixelLine) => {
-                    const pixelLength = getPixelLength(pixelLine);
-                    return pixelLength > 0 ? realCm / pixelLength : 0;
-                };
-
-                const ratios = {
-                    front_y_ratio: getRatio(currentProfile.height, calibrationState.lines.front_height),
-                    front_x_ratio: getRatio(currentProfile.shoulderWidth, calibrationState.lines.front_shoulder_width),
-                    side_y_ratio: getRatio(currentProfile.height, calibrationState.lines.side_height),
-                    side_z_ratio: getRatio(currentProfile.shoulderWidth * 0.5, calibrationState.lines.side_depth), // Approximation for chest depth
-                    back_y_ratio: getRatio(currentProfile.height, calibrationState.lines.back_height),
-                    back_x_ratio: getRatio(currentProfile.shoulderWidth, calibrationState.lines.back_shoulder_width),
-                };
-                
                 const coordinates = await getAiCoordinates();
-                if (!coordinates) {
-                    showModal("The AI could not identify measurement points on the images. Please try again with clearer, well-lit photos.");
-                    throw new Error("AI coordinate identification failed.");
+                if (!coordinates || !coordinates.top_of_head || !coordinates.bottom_of_feet) {
+                    showModal("The AI could not identify the required body landmarks. Please try again with clearer, full-body photos.");
+                    throw new Error("AI landmark identification failed.");
                 }
 
                 analysisStatusText.textContent = "Calculating measurements...";
-                const measurements = calculateMeasurements(coordinates, ratios);
-                lastCalculatedMeasurements = measurements; // Save for in-depth analysis
+                
+                // Calculate the primary ratio from the AI-detected height
+                const pixelHeight = Math.abs(coordinates.top_of_head.y - coordinates.bottom_of_feet.y);
+                const pixelsPerCm = pixelHeight > 0 ? pixelHeight / currentProfile.height : 0;
 
+                if (pixelsPerCm === 0) {
+                    showModal("Could not determine body scale from the photo. Please ensure the full body is visible from head to toe.");
+                    throw new Error("Failed to calculate pixelsPerCm ratio.");
+                }
+
+                const measurements = calculateMeasurements(coordinates, pixelsPerCm);
+                lastCalculatedMeasurements = measurements;
                 displayBasicReport(measurements);
                 showScreen('report');
 
             } catch (error) {
-                 console.error("Analysis with ratios failed:", error);
-                 showModal("An unexpected error occurred during the final analysis.");
+                 console.error("Automated analysis failed:", error);
+                 if (!modal.style.display || modal.style.display === 'none') {
+                    showModal("An unexpected error occurred during the analysis.");
+                 }
             } finally {
-                analysisLoaderContainer.classList.add('hidden');
-                startCalibrationBtn.disabled = false;
-                calibrationInstructions.classList.add('hidden');
-                 Object.values(calibrationState.canvases).forEach(canvas => {
-                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-                    canvas.classList.remove('active-canvas');
-                 });
+                analysisLoaderContainer.style.display = 'none';
+                document.getElementById('image-previews').style.display = 'grid';
             }
         }
         
-        function resizeAndEncodeImage(file, maxWidth = 512, maxHeight = 512) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let { width, height } = img;
-
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        const dataUrl = canvas.toDataURL(file.type);
-                        const base64 = dataUrl.split(',')[1];
-                        
-                        resolve({ mimeType: file.type, base64: base64 });
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
+        function resizeAndEncodeImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; const maxWidth = 512; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const base64 = canvas.toDataURL(file.type).split(',')[1]; resolve({ mimeType: file.type, base64 }); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 
         async function getAiCoordinates() {
-            const prompt = `Your task is to identify the pixel coordinates of specific anatomical landmarks on the three provided body images (front, side, back). Return ONLY a valid JSON object with the coordinates. The required points are: shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back. Example for a point: "shoulder_left": {"x": 150, "y": 200}.`;
-            
-            const [frontData, sideData, backData] = await Promise.all([
-                resizeAndEncodeImage(document.getElementById('front-image').files[0]),
-                resizeAndEncodeImage(document.getElementById('side-image').files[0]),
-                resizeAndEncodeImage(document.getElementById('back-image').files[0])
-            ]);
-
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: prompt },
-                        { inlineData: { mimeType: frontData.mimeType, data: frontData.base64 } },
-                        { inlineData: { mimeType: sideData.mimeType, data: sideData.base64 } },
-                        { inlineData: { mimeType: backData.mimeType, data: backData.base64 } }
-                    ]
-                }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    temperature: 0,
-                }
-            };
-            
+            // UPDATED: Added top_of_head and bottom_of_feet to the prompt
+            const prompt = `Return ONLY a valid JSON object with pixel coordinates for: top_of_head, bottom_of_feet, shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back. Example: "shoulder_left": {"x": 150, "y": 200}.`;
+            const [frontData, sideData, backData] = await Promise.all([ resizeAndEncodeImage(document.getElementById('front-image').files[0]), resizeAndEncodeImage(document.getElementById('side-image').files[0]), resizeAndEncodeImage(document.getElementById('back-image').files[0]) ]);
+            const payload = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: frontData.mimeType, data: frontData.base64 } }, { inlineData: { mimeType: sideData.mimeType, data: sideData.base64 } }, { inlineData: { mimeType: backData.mimeType, data: backData.base64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
-            
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                       const jsonText = result.candidates[0].content.parts[0].text;
-                       return JSON.parse(jsonText);
-                    }
-                } else {
-                     const errorText = await response.text();
-                     console.error(`Coordinate API Error:`, response.status, errorText);
-                     if (errorText.includes("API key not valid")) {
-                        showModal("API Key Error: The provided Gemini API key is not valid. Please check the key in the code.");
-                     }
-                }
-            } catch (error) {
-                console.error(`Coordinate Fetch error:`, error);
-            }
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } }
+                else { const errorText = await response.text(); console.error(`API Error:`, response.status, errorText); if (errorText.includes("API key not valid")) { showModal("API Key Error: Key is not valid."); } }
+            } catch (error) { console.error(`Fetch error:`, error); }
             return null;
         }
 
-        // FIXED: Made calculations more robust with optional chaining (?.) and default values
-        function calculateMeasurements(coords, ratios) {
+        // UPDATED: Calculation now uses a single pixelsPerCm ratio
+        function calculateMeasurements(coords, pixelsPerCm) {
             const measurements = {};
             const pi = Math.PI;
+            const getCircumference = (widthCm, depthCm) => { if (!widthCm || !depthCm || widthCm <= 0 || depthCm <= 0) return 0; const a = widthCm / 2; const b = depthCm / 2; return pi * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b))); };
+            
+            const pxToCm = (px) => px / pixelsPerCm;
 
-            const getCircumference = (widthCm, depthCm) => {
-                if (!widthCm || !depthCm || widthCm <= 0 || depthCm <= 0) return 0;
-                // Ramanujan's approximation for the circumference of an ellipse
-                const a = widthCm / 2; // semi-major axis
-                const b = depthCm / 2; // semi-minor axis
-                return pi * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
-            };
-
-            const shoulder_width_px = Math.abs((coords?.shoulder_left?.x || 0) - (coords?.shoulder_right?.x || 0));
-            measurements["Shoulder Width"] = shoulder_width_px * ratios.front_x_ratio;
-
-            const chest_width_px = Math.abs((coords?.chest_left?.x || 0) - (coords?.chest_right?.x || 0));
-            const chest_depth_px = Math.abs((coords?.chest_front?.x || 0) - (coords?.chest_back?.x || 0));
-            const chest_width_cm = chest_width_px * ratios.front_x_ratio;
-            const chest_depth_cm = chest_depth_px * ratios.side_z_ratio;
-            measurements["Chest"] = getCircumference(chest_width_cm, chest_depth_cm);
-
-            const waist_width_px = Math.abs((coords?.waist_left?.x || 0) - (coords?.waist_right?.x || 0));
-            const waist_depth_px = Math.abs((coords?.waist_front?.x || 0) - (coords?.waist_back?.x || 0));
-            const waist_width_cm = waist_width_px * ratios.front_x_ratio;
-            const waist_depth_cm = waist_depth_px * ratios.side_z_ratio;
-            measurements["Waist"] = getCircumference(waist_width_cm, waist_depth_cm);
-
-            const hip_width_px = Math.abs((coords?.hip_left?.x || 0) - (coords?.hip_right?.x || 0));
-            const hip_depth_px = Math.abs((coords?.hip_front?.x || 0) - (coords?.hip_back?.x || 0));
-            const hip_width_cm = hip_width_px * ratios.front_x_ratio;
-            const hip_depth_cm = hip_depth_px * ratios.side_z_ratio;
-            measurements["Hip"] = getCircumference(hip_width_cm, hip_depth_cm);
-
+            measurements["Shoulder Width"] = pxToCm(Math.abs((coords?.shoulder_left?.x || 0) - (coords?.shoulder_right?.x || 0)));
+            measurements["Chest"] = getCircumference(pxToCm(Math.abs((coords?.chest_left?.x || 0) - (coords?.chest_right?.x || 0))), pxToCm(Math.abs((coords?.chest_front?.x || 0) - (coords?.chest_back?.x || 0))));
+            measurements["Waist"] = getCircumference(pxToCm(Math.abs((coords?.waist_left?.x || 0) - (coords?.waist_right?.x || 0))), pxToCm(Math.abs((coords?.waist_front?.x || 0) - (coords?.waist_back?.x || 0))));
+            measurements["Hip"] = getCircumference(pxToCm(Math.abs((coords?.hip_left?.x || 0) - (coords?.hip_right?.x || 0))), pxToCm(Math.abs((coords?.hip_front?.x || 0) - (coords?.hip_back?.x || 0))));
             return measurements;
         }
 
         async function getAiPhysiqueAnalysis(measurements) {
-            const prompt = `Given the following body measurements for a ${currentProfile.gender}, analyze the physique to determine the somatotype (body type) and provide sports recommendations. Return ONLY a valid JSON object with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }) keys.
-
-            Measurements:
-            ${JSON.stringify(measurements, null, 2)}
-            `;
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    temperature: 0.2,
-                }
-            };
+            const prompt = `Given these measurements for a ${currentProfile.gender}, analyze the physique for somatotype and sports recommendations. Return ONLY a valid JSON object with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }) keys. Data: ${JSON.stringify(measurements, null, 2)}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                       const jsonText = result.candidates[0].content.parts[0].text;
-                       return JSON.parse(jsonText);
-                    }
-                } else {
-                     console.error(`Analysis API Error:`, response.status, await response.text());
-                }
-            } catch (error) {
-                console.error(`Analysis Fetch error:`, error);
-            }
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } }
+                else { console.error(`Analysis API Error:`, response.status, await response.text()); }
+            } catch (error) { console.error(`Analysis Fetch error:`, error); }
             return null;
         }
         
         async function handleInDepthAnalysis() {
             if (!lastCalculatedMeasurements) return;
             getInDepthAnalysisBtn.classList.add('hidden');
-            inDepthLoader.classList.remove('hidden');
-
+            inDepthLoader.style.display = 'flex';
             const analysis = await getAiPhysiqueAnalysis(lastCalculatedMeasurements);
-            if (analysis && analysis.bodyType && analysis.sportsRecommendation) {
+            if (analysis?.bodyType && analysis?.sportsRecommendation) {
                 document.getElementById('body-type-title').textContent = analysis.bodyType.type;
                 document.getElementById('body-type-description').textContent = analysis.bodyType.description;
-
-                const recommendedList = document.getElementById('recommended-sports-list');
-                recommendedList.innerHTML = analysis.sportsRecommendation.recommended.map(sport => `<li>${sport}</li>`).join('');
-                const cautionList = document.getElementById('caution-sports-list');
-                cautionList.innerHTML = analysis.sportsRecommendation.caution.map(sport => `<li>${sport}</li>`).join('');
+                document.getElementById('recommended-sports-list').innerHTML = analysis.sportsRecommendation.recommended.map(s => `<li>${s}</li>`).join('');
+                document.getElementById('caution-sports-list').innerHTML = analysis.sportsRecommendation.caution.map(s => `<li>${s}</li>`).join('');
                 inDepthContent.classList.remove('hidden');
-            } else {
-                showModal("Could not generate the in-depth analysis at this time.");
-                getInDepthAnalysisBtn.classList.remove('hidden');
-            }
-            inDepthLoader.classList.add('hidden');
+            } else { showModal("Could not generate the in-depth analysis."); getInDepthAnalysisBtn.classList.remove('hidden'); }
+            inDepthLoader.style.display = 'none';
         }
 
         function displayBasicReport(measurements) {
             resultsGrid.innerHTML = '';
             for (const [key, value] of Object.entries(measurements)) {
-                const resultItem = document.createElement('div');
-                resultItem.className = 'bg-gray-800 p-4 rounded-lg';
-                resultItem.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(1)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
-                resultsGrid.appendChild(resultItem);
+                const item = document.createElement('div');
+                item.className = 'bg-gray-800 p-4 rounded-lg';
+                item.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(1)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
+                resultsGrid.appendChild(item);
             }
-            // Reset and hide the in-depth section for the new report
             inDepthContent.classList.add('hidden');
             getInDepthAnalysisBtn.classList.remove('hidden');
         }
