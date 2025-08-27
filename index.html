@@ -1,40 +1,3 @@
-Of course. I've analyzed and rewritten the code to resolve the errors you're facing.
-
-The "unexpected error" during analysis was caused by a missing helper function that is required to process images before sending them to the AI. The issue with deleting profiles is not a bug in the code itself, but a permissions problem in your Firebase database which I'll show you how to fix.
-
-### Summary of Fixes
-
-1.  **Analysis Error Corrected:** The primary bug was a missing function called `resizeAndEncodeImage`. The code was trying to use it to prepare your uploaded photos for the AI, but it was never defined, causing the process to crash. I have written and included this necessary function.
-2.  **Deletion Error Explained:** The reason you can't delete profiles is that your Firestore database's security rules are, by default, too restrictive. They prevent any user from deleting data. The provided JavaScript is correct, but it's being blocked by the backend. **You must update your Firestore rules** in the Firebase console for deletion to work.
-3.  **Improved Robustness:** I've made the measurement calculation logic more resilient. It will no longer crash if the AI model fails to identify one of the measurement points on the images.
-4.  **Code Cleanup:** The event listeners for both "Sign Out" buttons have been consolidated for cleaner code.
-
------
-
-### 1\. Update Your Firestore Rules
-
-Before using the updated code, go to your **Firebase project \> Firestore Database \> Rules** and replace the default rules with the following. This is a **required step** for saving and deleting profiles.
-
-```javascript
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow authenticated users to read, write, and delete their own profiles.
-    match /artifacts/body-measurement-app/users/{userId}/profiles/{profileId} {
-      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
-
------
-
-### 2\. Fully Corrected Code
-
-Here is the complete `index.html` file with all the errors fixed and improvements implemented. You can replace the entire content of your file with this.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,11 +36,13 @@ Here is the complete `index.html` file with all the errors fixed and improvement
 
     <div id="app-container" class="w-full max-w-6xl mx-auto bg-gray-800 rounded-2xl shadow-2xl overflow-hidden relative pb-12">
 
+        <!-- Loading Screen -->
         <div id="loading-screen" class="screen active flex-col items-center justify-center h-[80vh]">
             <div class="loader"></div>
             <p class="mt-4 text-lg text-gray-400">Initializing AI Analysis Engine...</p>
         </div>
 
+        <!-- Login Screen -->
         <div id="login-screen" class="screen flex-col items-center justify-center h-[80vh] p-8 text-center">
             <h1 class="text-5xl font-bold text-white mb-4">Body Composition AI</h1>
             <p class="text-xl text-gray-400 mb-12 max-w-2xl">Sign in with your Google account to save and manage your personal body measurement profiles.</p>
@@ -87,11 +52,12 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             </button>
         </div>
 
+        <!-- Profile Dashboard Screen -->
         <div id="profile-dashboard-screen" class="screen flex-col items-center justify-start h-auto min-h-[80vh] p-8">
              <div class="w-full max-w-3xl">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold">Your Profiles</h2>
-                    <button class="sign-out-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
+                    <button id="sign-out-btn-1" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
                         <i data-lucide="log-out"></i> Sign Out
                     </button>
                 </div>
@@ -102,6 +68,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             </div>
         </div>
 
+        <!-- New Profile Screen -->
         <div id="new-profile-screen" class="screen flex-col items-center justify-center h-auto p-8">
             <div class="w-full max-w-lg">
                 <button id="back-to-dashboard-from-new" class="mb-6 text-gray-400 hover:text-white flex items-center gap-2">
@@ -127,11 +94,13 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             </div>
         </div>
 
+        <!-- Main Analysis Screen -->
         <div id="main-analysis-screen" class="screen flex-col lg:flex-row p-8 gap-8 h-auto min-h-[80vh]">
+            <!-- Left Panel -->
             <div class="w-full lg:w-1/3 space-y-6">
                  <div class="flex justify-between items-center">
                     <button id="back-to-dashboard-from-main" class="text-gray-400 hover:text-white flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Profiles</button>
-                    <button class="sign-out-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="log-out"></i> Sign Out</button>
+                    <button id="sign-out-btn-2" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="log-out"></i> Sign Out</button>
                 </div>
                 <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
                     <h3 class="text-2xl font-bold mb-4">Profile Details</h3>
@@ -157,6 +126,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                  <button id="start-calibration-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Start Calibration</button>
             </div>
 
+            <!-- Right Panel -->
             <div class="w-full lg:w-2/3">
                  <div id="calibration-instructions" class="bg-indigo-900/50 p-4 rounded-lg text-center mb-4 hidden">
                     <div class="flex justify-between items-center">
@@ -188,6 +158,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             </div>
         </div>
         
+        <!-- Detailed Report Screen -->
         <div id="report-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-6">
             <div class="w-full max-w-5xl mx-auto">
                 <div class="flex justify-between items-center mb-6">
@@ -227,11 +198,13 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             </div>
         </div>
         
+        <!-- Footer with your details -->
         <footer class="absolute bottom-0 left-0 right-0 p-4 text-center text-gray-500 text-sm">
             Made by <a href="https://www.linkedin.com/in/satya-kulthe/" target="_blank" class="text-indigo-400 hover:underline">Satya Kulthe</a>
         </footer>
     </div>
 
+    <!-- Custom Modal -->
     <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-700 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-gray-600">
             <p id="modal-message" class="mb-6 text-lg">Message goes here.</p>
@@ -258,11 +231,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             measurementId: "G-6YF20DVRZE"
         };
         
-        // !!! IMPORTANT SECURITY WARNING !!!
-        // DO NOT expose your secret API keys in client-side code in a real application.
-        // This key can be stolen and used by others, leading to unexpected charges.
-        // For production, use a backend service (like a Cloud Function) to make API calls.
-        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
+        const USER_PROVIDED_API_KEY = "AIzaSyBzsQTdqE19YG5tFXcN_zhpGgm_2J_-b6Y";
 
         // --- App State ---
         let app, db, auth, userId;
@@ -336,7 +305,8 @@ Here is the complete `index.html` file with all the errors fixed and improvement
 
         // --- Event Listeners ---
         document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
-        document.querySelectorAll('.sign-out-btn').forEach(btn => btn.addEventListener('click', handleSignOut));
+        document.getElementById('sign-out-btn-1').addEventListener('click', handleSignOut);
+        document.getElementById('sign-out-btn-2').addEventListener('click', handleSignOut);
         document.getElementById('go-to-new-profile-from-dashboard').addEventListener('click', () => showScreen('newProfile'));
         document.getElementById('back-to-dashboard-from-new').addEventListener('click', () => showScreen('dashboard'));
         document.getElementById('back-to-dashboard-from-main').addEventListener('click', () => {
@@ -423,7 +393,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                 newProfileForm.reset();
             } catch (error) {
                 console.error("Error adding document: ", error);
-                showModal("Failed to save profile. Please ensure your Firestore security rules are set up correctly.");
+                showModal("Failed to save profile. Please check Firestore rules.");
             }
         });
 
@@ -447,7 +417,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                         <p class="font-bold text-lg">${profile.name}</p>
                         <p class="text-sm text-gray-400">${profile.sports || 'N/A'} | ${profile.country || 'N/A'}</p>
                     </div>
-                    <button data-delete-id="${profile.id}" class="delete-profile-btn text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>
+                    <button data-delete-id="${profile.id}" class="text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>
                 `;
                 
                 profileElement.querySelector('.cursor-pointer').onclick = () => {
@@ -456,14 +426,14 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                     showScreen('main');
                 };
 
-                profileElement.querySelector('.delete-profile-btn').onclick = () => {
+                profileElement.querySelector('button').onclick = () => {
                     showModal(`Are you sure you want to delete the profile for ${profile.name}?`, async () => {
                          try {
                             await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id));
                             loadProfiles(); // Refresh the list
                         } catch (error) {
                             console.error("Error deleting profile:", error);
-                            showModal("Failed to delete profile. Please ensure your Firestore security rules are set up correctly to allow deletion.");
+                            showModal("Failed to delete profile.");
                         }
                     });
                 };
@@ -557,16 +527,15 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                 const resizeCanvas = () => {
                     canvas.width = img.clientWidth;
                     canvas.height = img.clientHeight;
-                    redrawLinesForCanvas(key);
                 };
                 
-                new ResizeObserver(resizeCanvas).observe(img);
+                img.onload = resizeCanvas;
                 if (img.complete) resizeCanvas();
 
                 canvas.onmousedown = (e) => handleCanvasMouseDown(e, key);
                 canvas.onmousemove = (e) => handleCanvasMouseMove(e, key);
                 canvas.onmouseup = (e) => handleCanvasMouseUp(e, key);
-                canvas.onmouseleave = () => { if (calibrationState.isDrawing) { calibrationState.isDrawing = false; redrawLinesForCanvas(key); } };
+                canvas.onmouseleave = () => { calibrationState.isDrawing = false; };
             });
         }
         
@@ -594,7 +563,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
 
         function handleCanvasMouseDown(event, imageKey) {
             const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
+            if (currentTask.image !== imageKey) return;
             
             calibrationState.isDrawing = true;
             calibrationState.startPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
@@ -603,25 +572,32 @@ Here is the complete `index.html` file with all the errors fixed and improvement
         function handleCanvasMouseMove(event, imageKey) {
             if (!calibrationState.isDrawing) return;
             const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
+            if (currentTask.image !== imageKey) return;
             
             const canvas = calibrationState.canvases[imageKey];
+            const ctx = canvas.getContext('2d');
             const currentPoint = getCanvasCoords(event, canvas);
             
-            redrawLinesForCanvas(imageKey);
-            drawLine(canvas, calibrationState.startPoint, currentPoint, true);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const key in calibrationState.lines) {
+                const task = calibrationTasks.find(t => t.key === key);
+                if (task.image === imageKey) {
+                    const line = calibrationState.lines[key];
+                    drawLine(canvas, line.start, line.end);
+                }
+            }
+            drawLine(canvas, calibrationState.startPoint, currentPoint);
         }
 
         function handleCanvasMouseUp(event, imageKey) {
             if (!calibrationState.isDrawing) return;
             const currentTask = calibrationTasks[calibrationState.currentIndex];
-            if (!currentTask || currentTask.image !== imageKey) return;
+            if (currentTask.image !== imageKey) return;
 
             calibrationState.isDrawing = false;
             const endPoint = getCanvasCoords(event, calibrationState.canvases[imageKey]);
             calibrationState.lines[currentTask.key] = { start: calibrationState.startPoint, end: endPoint };
             
-            redrawLinesForCanvas(imageKey);
             calibrationState.currentIndex++;
             updateCalibrationInstructions();
         }
@@ -631,34 +607,70 @@ Here is the complete `index.html` file with all the errors fixed and improvement
 
             calibrationState.currentIndex--;
             const lastTask = calibrationTasks[calibrationState.currentIndex];
-            const imageKeyToClear = lastTask.image;
             delete calibrationState.lines[lastTask.key];
 
-            redrawLinesForCanvas(imageKeyToClear);
-            updateCalibrationInstructions();
-        }
-
-        function redrawLinesForCanvas(imageKey) {
-            const canvas = calibrationState.canvases[imageKey];
+            const canvas = calibrationState.canvases[lastTask.image];
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             for (const key in calibrationState.lines) {
                 const task = calibrationTasks.find(t => t.key === key);
-                if (task.image === imageKey) {
+                if (task.image === lastTask.image) {
                     const line = calibrationState.lines[key];
                     drawLine(canvas, line.start, line.end);
                 }
             }
+            updateCalibrationInstructions();
         }
 
-        function drawLine(canvas, start, end, isTemporary = false) {
+        function drawLine(canvas, start, end) {
             const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = isTemporary ? 'rgba(79, 70, 229, 0.9)' : 'rgba(255, 255, 0, 0.8)';
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(start.x, start.y);
             ctx.lineTo(end.x, end.y);
             ctx.stroke();
+        }
+
+        // --- Missing Function: resizeAndEncodeImage ---
+        async function resizeAndEncodeImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 800;
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        resolve({
+                            mimeType: 'image/jpeg',
+                            base64: canvas.toDataURL('image/jpeg').split(',')[1]
+                        });
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
         }
 
         async function runAnalysisWithCalibratedRatios() {
@@ -667,25 +679,26 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             analysisStatusText.textContent = "Locating measurement points...";
 
             try {
-                // Calculate ratios safely, checking for zero pixel length
-                const getRatio = (realCm, pixelLine) => {
-                    const pixelLength = Math.sqrt(Math.pow(pixelLine.start.x - pixelLine.end.x, 2) + Math.pow(pixelLine.start.y - pixelLine.end.y, 2));
-                    return pixelLength > 0 ? realCm / pixelLength : 0;
-                };
-
+                const frontHeightPixels = Math.abs(calibrationState.lines.front_height.start.y - calibrationState.lines.front_height.end.y);
+                const frontShoulderPixels = Math.abs(calibrationState.lines.front_shoulder_width.start.x - calibrationState.lines.front_shoulder_width.end.x);
+                const sideHeightPixels = Math.abs(calibrationState.lines.side_height.start.y - calibrationState.lines.side_height.end.y);
+                const sideDepthPixels = Math.abs(calibrationState.lines.side_depth.start.x - calibrationState.lines.side_depth.end.x);
+                const backHeightPixels = Math.abs(calibrationState.lines.back_height.start.y - calibrationState.lines.back_height.end.y);
+                const backShoulderPixels = Math.abs(calibrationState.lines.back_shoulder_width.start.x - calibrationState.lines.back_shoulder_width.end.x);
+                
                 const ratios = {
-                    front_y_ratio: getRatio(currentProfile.height, calibrationState.lines.front_height),
-                    front_x_ratio: getRatio(currentProfile.shoulderWidth, calibrationState.lines.front_shoulder_width),
-                    side_y_ratio: getRatio(currentProfile.height, calibrationState.lines.side_height),
-                    side_z_ratio: getRatio(currentProfile.shoulderWidth * 0.5, calibrationState.lines.side_depth), // Approximation for chest depth
-                    back_y_ratio: getRatio(currentProfile.height, calibrationState.lines.back_height),
-                    back_x_ratio: getRatio(currentProfile.shoulderWidth, calibrationState.lines.back_shoulder_width),
+                    front_y_ratio: currentProfile.height / frontHeightPixels,
+                    front_x_ratio: currentProfile.shoulderWidth / frontShoulderPixels,
+                    side_y_ratio: currentProfile.height / sideHeightPixels,
+                    side_z_ratio: (currentProfile.shoulderWidth * 0.5) / sideDepthPixels,
+                    back_y_ratio: currentProfile.height / backHeightPixels,
+                    back_x_ratio: currentProfile.shoulderWidth / backShoulderPixels,
                 };
                 
                 const coordinates = await getAiCoordinates();
                 if (!coordinates) {
-                    showModal("The AI could not identify measurement points on the images. Please try again with clearer, well-lit photos.");
-                    throw new Error("AI coordinate identification failed.");
+                    showModal("The AI could not identify all measurement points on the images. Please try again with clearer photos.");
+                    return;
                 }
 
                 analysisStatusText.textContent = "Calculating measurements...";
@@ -709,51 +722,8 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             }
         }
 
-        // --- AI & Calculation Functions ---
-
-        // FIXED: Added the missing image processing function
-        function resizeAndEncodeImage(file, maxWidth = 512, maxHeight = 512) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let { width, height } = img;
-
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        const dataUrl = canvas.toDataURL(file.type);
-                        const base64 = dataUrl.split(',')[1];
-                        
-                        resolve({ mimeType: file.type, base64: base64 });
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
         async function getAiCoordinates() {
-            const prompt = `Your task is to identify the pixel coordinates of specific anatomical landmarks on the three provided body images (front, side, back). Return ONLY a valid JSON object with the coordinates. The required points are: shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back. Example for a point: "shoulder_left": {"x": 150, "y": 200}.`;
+            const prompt = `Your task is to identify the pixel coordinates of specific anatomical landmarks on the three provided body images (front, side, back). Return ONLY a JSON object with the coordinates. The required points are: shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back.`;
             
             const [frontData, sideData, backData] = await Promise.all([
                 resizeAndEncodeImage(document.getElementById('front-image').files[0]),
@@ -777,7 +747,8 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                 }
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
+            const apiKey = USER_PROVIDED_API_KEY;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             
             try {
                 const response = await fetch(apiUrl, {
@@ -792,11 +763,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                        return JSON.parse(jsonText);
                     }
                 } else {
-                     const errorText = await response.text();
-                     console.error(`Coordinate API Error:`, response.status, errorText);
-                     if (errorText.includes("API key not valid")) {
-                        showModal("API Key Error: The provided Gemini API key is not valid. Please check the key in the code.");
-                     }
+                     console.error(`Coordinate API Error:`, response.status, await response.text());
                 }
             } catch (error) {
                 console.error(`Coordinate Fetch error:`, error);
@@ -804,43 +771,36 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             return null;
         }
 
-        // FIXED: Made calculations more robust with optional chaining (?.)
         function calculateMeasurements(coords, ratios) {
             const measurements = {};
             const pi = Math.PI;
 
-            const getCircumference = (widthCm, depthCm) => {
-                if (!widthCm || !depthCm || widthCm <= 0 || depthCm <= 0) return 0;
-                // Ramanujan's approximation for the circumference of an ellipse
-                return pi * (3 * (widthCm + depthCm) - Math.sqrt((3 * widthCm + depthCm) * (widthCm + 3 * depthCm))) / 2;
-            };
-
-            const shoulder_width_px = Math.abs((coords?.shoulder_left?.x || 0) - (coords?.shoulder_right?.x || 0));
+            const shoulder_width_px = Math.abs(coords.shoulder_left.x - coords.shoulder_right.x);
             measurements["Shoulder Width"] = shoulder_width_px * ratios.front_x_ratio;
 
-            const chest_width_px = Math.abs((coords?.chest_left?.x || 0) - (coords?.chest_right?.x || 0));
-            const chest_depth_px = Math.abs((coords?.chest_front?.x || 0) - (coords?.chest_back?.x || 0));
+            const chest_width_px = Math.abs(coords.chest_left.x - coords.chest_right.x);
+            const chest_depth_px = Math.abs(coords.chest_front.x - coords.chest_back.x);
             const chest_width_cm = chest_width_px * ratios.front_x_ratio;
             const chest_depth_cm = chest_depth_px * ratios.side_z_ratio;
-            measurements["Chest"] = getCircumference(chest_width_cm, chest_depth_cm);
+            measurements["Chest"] = pi * (3 * (chest_width_cm + chest_depth_cm) - Math.sqrt((3 * chest_width_cm + chest_depth_cm) * (chest_width_cm + 3 * chest_depth_cm))) / 2;
 
-            const waist_width_px = Math.abs((coords?.waist_left?.x || 0) - (coords?.waist_right?.x || 0));
-            const waist_depth_px = Math.abs((coords?.waist_front?.x || 0) - (coords?.waist_back?.x || 0));
+            const waist_width_px = Math.abs(coords.waist_left.x - coords.waist_right.x);
+            const waist_depth_px = Math.abs(coords.waist_front.x - coords.waist_back.x);
             const waist_width_cm = waist_width_px * ratios.front_x_ratio;
             const waist_depth_cm = waist_depth_px * ratios.side_z_ratio;
-            measurements["Waist"] = getCircumference(waist_width_cm, waist_depth_cm);
+            measurements["Waist"] = pi * (3 * (waist_width_cm + waist_depth_cm) - Math.sqrt((3 * waist_width_cm + waist_depth_cm) * (waist_width_cm + 3 * waist_depth_cm))) / 2;
 
-            const hip_width_px = Math.abs((coords?.hip_left?.x || 0) - (coords?.hip_right?.x || 0));
-            const hip_depth_px = Math.abs((coords?.hip_front?.x || 0) - (coords?.hip_back?.x || 0));
+            const hip_width_px = Math.abs(coords.hip_left.x - coords.hip_right.x);
+            const hip_depth_px = Math.abs(coords.hip_front.x - coords.hip_back.x);
             const hip_width_cm = hip_width_px * ratios.front_x_ratio;
             const hip_depth_cm = hip_depth_px * ratios.side_z_ratio;
-            measurements["Hip"] = getCircumference(hip_width_cm, hip_depth_cm);
+            measurements["Hip"] = pi * (3 * (hip_width_cm + hip_depth_cm) - Math.sqrt((3 * hip_width_cm + hip_depth_cm) * (hip_width_cm + 3 * hip_depth_cm))) / 2;
 
             return measurements;
         }
 
         async function getAiPhysiqueAnalysis(measurements) {
-            const prompt = `Given the following body measurements for a ${currentProfile.gender}, analyze the physique to determine the somatotype (body type) and provide sports recommendations. Return ONLY a valid JSON object with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }) keys.
+            const prompt = `Given the following body measurements for a ${currentProfile.gender}, analyze the physique to determine the somatotype (body type) and provide sports recommendations. Return ONLY a JSON object with 'bodyType' and 'sportsRecommendation' keys.
 
             Measurements:
             ${JSON.stringify(measurements, null, 2)}
@@ -852,7 +812,8 @@ Here is the complete `index.html` file with all the errors fixed and improvement
                     temperature: 0.2,
                 }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+            const apiKey = USER_PROVIDED_API_KEY;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -880,7 +841,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             inDepthLoader.classList.remove('hidden');
 
             const analysis = await getAiPhysiqueAnalysis(lastCalculatedMeasurements);
-            if (analysis && analysis.bodyType && analysis.sportsRecommendation) {
+            if (analysis) {
                 document.getElementById('body-type-title').textContent = analysis.bodyType.type;
                 document.getElementById('body-type-description').textContent = analysis.bodyType.description;
 
@@ -901,7 +862,7 @@ Here is the complete `index.html` file with all the errors fixed and improvement
             for (const [key, value] of Object.entries(measurements)) {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'bg-gray-800 p-4 rounded-lg';
-                resultItem.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(1)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
+                resultItem.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(2)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
                 resultsGrid.appendChild(resultItem);
             }
             // Reset and hide the in-depth section for the new report
@@ -912,4 +873,3 @@ Here is the complete `index.html` file with all the errors fixed and improvement
     </script>
 </body>
 </html>
-```
