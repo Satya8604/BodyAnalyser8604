@@ -25,7 +25,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Removed calibration-canvas styles as they are no longer needed for drawing */
         .preview-canvas {
             max-width: 100%;
             max-height: 100%;
@@ -123,14 +122,12 @@
                         </div>
                     </div>
                 </div>
-                 <!-- UPDATED: Button text changed to reflect new auto-calibration flow -->
                  <button id="start-analysis-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Analyze Body</button>
             </div>
 
             <!-- Right Panel -->
-            <div class="w-full lg:w-2/3">
-                 <!-- REMOVED: Calibration instructions are no longer needed -->
-                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+            <div class="w-full lg:w-2/3 flex items-center justify-center">
+                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full w-full">
                     <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
                         <canvas id="front-canvas" class="preview-canvas rounded-xl"></canvas>
                     </div>
@@ -141,7 +138,7 @@
                         <canvas id="back-canvas" class="preview-canvas rounded-xl"></canvas>
                     </div>
                 </div>
-                <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full">
+                <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full w-full">
                     <div class="loader"></div>
                     <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
                 </div>
@@ -280,27 +277,41 @@
         setupImagePreview('side-image', 'side');
         setupImagePreview('back-image', 'back');
 
-        // --- NEW: Automated Analysis Flow ---
+        // --- UPDATED: Automated Analysis Flow ---
         async function runAutomatedAnalysis() {
-            if (!currentProfile || !imageState.front || !imageState.side || !imageState.back) {
-                showModal("Please create a profile and upload all three images to begin analysis.");
+            if (!currentProfile || !imageState.front || !imageState.side) {
+                showModal("Please create a profile and upload at least the front and side images to begin analysis.");
                 return;
             }
             analysisLoaderContainer.style.display = 'flex';
             document.getElementById('image-previews').style.display = 'none';
-            analysisStatusText.textContent = "Analyzing body landmarks...";
 
             try {
-                const coordinates = await getAiCoordinates();
-                if (!coordinates || !coordinates.top_of_head || !coordinates.bottom_of_feet) {
-                    showModal("The AI could not identify the required body landmarks. Please try again with clearer, full-body photos.");
-                    throw new Error("AI landmark identification failed.");
+                // Step 1: Analyze the front image for height and width measurements
+                analysisStatusText.textContent = "Analyzing front view (1/2)...";
+                const frontPrompt = `From the provided front-view image, return ONLY a valid JSON object with pixel coordinates for: top_of_head, bottom_of_feet, shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
+                const frontCoords = await getAiCoordinates(document.getElementById('front-image').files[0], frontPrompt);
+
+                if (!frontCoords || !frontCoords.top_of_head || !frontCoords.bottom_of_feet) {
+                    showModal("The AI could not determine your height from the front photo. Please use a clearer, full-body image.");
+                    throw new Error("AI landmark identification failed on front image.");
                 }
 
+                // Step 2: Analyze the side image for depth measurements
+                analysisStatusText.textContent = "Analyzing side view (2/2)...";
+                const sidePrompt = `From the provided side-view image, return ONLY a valid JSON object with pixel coordinates for: chest_front, chest_back, waist_front, waist_back, hip_front, hip_back.`;
+                const sideCoords = await getAiCoordinates(document.getElementById('side-image').files[0], sidePrompt);
+
+                if (!sideCoords) {
+                    showModal("The AI could not determine body depth from the side photo. Please use a clearer image.");
+                    throw new Error("AI landmark identification failed on side image.");
+                }
+
+                // Step 3: Combine results and calculate
                 analysisStatusText.textContent = "Calculating measurements...";
+                const allCoords = { ...frontCoords, ...sideCoords };
                 
-                // Calculate the primary ratio from the AI-detected height
-                const pixelHeight = Math.abs(coordinates.top_of_head.y - coordinates.bottom_of_feet.y);
+                const pixelHeight = Math.abs(allCoords.top_of_head.y - allCoords.bottom_of_feet.y);
                 const pixelsPerCm = pixelHeight > 0 ? pixelHeight / currentProfile.height : 0;
 
                 if (pixelsPerCm === 0) {
@@ -308,7 +319,7 @@
                     throw new Error("Failed to calculate pixelsPerCm ratio.");
                 }
 
-                const measurements = calculateMeasurements(coordinates, pixelsPerCm);
+                const measurements = calculateMeasurements(allCoords, pixelsPerCm);
                 lastCalculatedMeasurements = measurements;
                 displayBasicReport(measurements);
                 showScreen('report');
@@ -316,7 +327,7 @@
             } catch (error) {
                  console.error("Automated analysis failed:", error);
                  if (!modal.style.display || modal.style.display === 'none') {
-                    showModal("An unexpected error occurred during the analysis.");
+                    showModal("An unexpected error occurred during the analysis. Check the console for details.");
                  }
             } finally {
                 analysisLoaderContainer.style.display = 'none';
@@ -326,21 +337,41 @@
         
         function resizeAndEncodeImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; const maxWidth = 512; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const base64 = canvas.toDataURL(file.type).split(',')[1]; resolve({ mimeType: file.type, base64 }); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 
-        async function getAiCoordinates() {
-            // UPDATED: Added top_of_head and bottom_of_feet to the prompt
-            const prompt = `Return ONLY a valid JSON object with pixel coordinates for: top_of_head, bottom_of_feet, shoulder_left, shoulder_right, chest_left, chest_right, chest_front, chest_back, waist_left, waist_right, waist_front, waist_back, hip_left, hip_right, hip_front, hip_back. Example: "shoulder_left": {"x": 150, "y": 200}.`;
-            const [frontData, sideData, backData] = await Promise.all([ resizeAndEncodeImage(document.getElementById('front-image').files[0]), resizeAndEncodeImage(document.getElementById('side-image').files[0]), resizeAndEncodeImage(document.getElementById('back-image').files[0]) ]);
-            const payload = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: frontData.mimeType, data: frontData.base64 } }, { inlineData: { mimeType: sideData.mimeType, data: sideData.base64 } }, { inlineData: { mimeType: backData.mimeType, data: backData.base64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } };
+        // UPDATED: Function now takes a file and a specific prompt
+        async function getAiCoordinates(imageFile, prompt) {
+            if (!imageFile) return null;
+            const imageData = await resizeAndEncodeImage(imageFile);
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } }
+                    ]
+                }],
+                generationConfig: { responseMimeType: "application/json", temperature: 0 }
+            };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } }
-                else { const errorText = await response.text(); console.error(`API Error:`, response.status, errorText); if (errorText.includes("API key not valid")) { showModal("API Key Error: Key is not valid."); } }
-            } catch (error) { console.error(`Fetch error:`, error); }
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.candidates?.[0]?.content?.parts?.[0]) {
+                        return JSON.parse(result.candidates[0].content.parts[0].text);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error(`API Error:`, response.status, errorText);
+                    if (errorText.includes("API key not valid")) {
+                        showModal("API Key Error: Key is not valid.");
+                    }
+                }
+            } catch (error) {
+                console.error(`Fetch error:`, error);
+            }
             return null;
         }
 
-        // UPDATED: Calculation now uses a single pixelsPerCm ratio
         function calculateMeasurements(coords, pixelsPerCm) {
             const measurements = {};
             const pi = Math.PI;
