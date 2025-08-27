@@ -277,45 +277,60 @@
         setupImagePreview('side-image', 'side');
         setupImagePreview('back-image', 'back');
 
-        // --- UPDATED: Automated Analysis Flow ---
+        // --- REWRITTEN: More Robust, Multi-Step Automated Analysis Flow ---
         async function runAutomatedAnalysis() {
-            if (!currentProfile || !imageState.front || !imageState.side) {
-                showModal("Please create a profile and upload at least the front and side images to begin analysis.");
+            if (!currentProfile || !imageState.front || !imageState.side || !imageState.back) {
+                showModal("Please create a profile and upload all three images (front, side, and back) to begin analysis.");
                 return;
             }
             analysisLoaderContainer.style.display = 'flex';
             document.getElementById('image-previews').style.display = 'none';
 
             try {
-                // Step 1: Analyze the front image for height and width measurements
-                analysisStatusText.textContent = "Analyzing front view (1/2)...";
-                const frontPrompt = `From the provided front-view image, return ONLY a valid JSON object with pixel coordinates for: top_of_head, bottom_of_feet, shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
-                const frontCoords = await getAiCoordinates(document.getElementById('front-image').files[0], frontPrompt);
+                // Step 1: Get Height for Scaling from the front image
+                analysisStatusText.textContent = "Detecting body scale (1/4)...";
+                const heightPrompt = `From the provided front-view image of a person, return ONLY a valid JSON object with the pixel coordinates for the very top of the head ("top_of_head") and the bottom of the feet ("bottom_of_feet").`;
+                const heightCoords = await callGeminiVision(document.getElementById('front-image').files[0], heightPrompt);
 
-                if (!frontCoords || !frontCoords.top_of_head || !frontCoords.bottom_of_feet) {
-                    showModal("The AI could not determine your height from the front photo. Please use a clearer, full-body image.");
+                if (!heightCoords || !heightCoords.top_of_head || !heightCoords.bottom_of_feet) {
+                    showModal("The AI could not determine your height from the front photo. Please use a clearer, full-body image where your head and feet are fully visible.");
+                    throw new Error("AI height detection failed.");
+                }
+
+                // Step 2: Get Width Landmarks from the front image
+                analysisStatusText.textContent = "Analyzing front view (2/4)...";
+                const frontPrompt = `From the provided front-view image, return ONLY a valid JSON object with pixel coordinates for: shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
+                const frontCoords = await callGeminiVision(document.getElementById('front-image').files[0], frontPrompt);
+                 if (!frontCoords) {
+                    showModal("The AI could not identify landmarks on the front photo. Please ensure your arms are slightly away from your body and the lighting is good.");
                     throw new Error("AI landmark identification failed on front image.");
                 }
 
-                // Step 2: Analyze the side image for depth measurements
-                analysisStatusText.textContent = "Analyzing side view (2/2)...";
+                // Step 3: Get Depth Landmarks from the side image
+                analysisStatusText.textContent = "Analyzing side view (3/4)...";
                 const sidePrompt = `From the provided side-view image, return ONLY a valid JSON object with pixel coordinates for: chest_front, chest_back, waist_front, waist_back, hip_front, hip_back.`;
-                const sideCoords = await getAiCoordinates(document.getElementById('side-image').files[0], sidePrompt);
+                const sideCoords = await callGeminiVision(document.getElementById('side-image').files[0], sidePrompt);
 
                 if (!sideCoords) {
-                    showModal("The AI could not determine body depth from the side photo. Please use a clearer image.");
+                    showModal("The AI could not determine body depth from the side photo. Please use a clearer image with a plain background.");
                     throw new Error("AI landmark identification failed on side image.");
                 }
 
-                // Step 3: Combine results and calculate
+                // Step 4: (Optional but good practice) Get back landmarks
+                analysisStatusText.textContent = "Analyzing back view (4/4)...";
+                const backPrompt = `From the provided back-view image, return ONLY a valid JSON object with pixel coordinates for shoulder_left_back and shoulder_right_back.`;
+                const backCoords = await callGeminiVision(document.getElementById('back-image').files[0], backPrompt);
+                // We can continue even if this one fails, as it's not critical for the current measurements.
+
+                // Step 5: Combine results and calculate
                 analysisStatusText.textContent = "Calculating measurements...";
-                const allCoords = { ...frontCoords, ...sideCoords };
+                const allCoords = { ...heightCoords, ...frontCoords, ...sideCoords, ...backCoords };
                 
                 const pixelHeight = Math.abs(allCoords.top_of_head.y - allCoords.bottom_of_feet.y);
                 const pixelsPerCm = pixelHeight > 0 ? pixelHeight / currentProfile.height : 0;
 
                 if (pixelsPerCm === 0) {
-                    showModal("Could not determine body scale from the photo. Please ensure the full body is visible from head to toe.");
+                    showModal("Could not determine body scale from the photo. This is an unexpected error.");
                     throw new Error("Failed to calculate pixelsPerCm ratio.");
                 }
 
@@ -327,7 +342,7 @@
             } catch (error) {
                  console.error("Automated analysis failed:", error);
                  if (!modal.style.display || modal.style.display === 'none') {
-                    showModal("An unexpected error occurred during the analysis. Check the console for details.");
+                    showModal("An unexpected error occurred during the analysis. Please try again or check the console for details.");
                  }
             } finally {
                 analysisLoaderContainer.style.display = 'none';
@@ -337,8 +352,8 @@
         
         function resizeAndEncodeImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; const maxWidth = 512; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const base64 = canvas.toDataURL(file.type).split(',')[1]; resolve({ mimeType: file.type, base64 }); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 
-        // UPDATED: Function now takes a file and a specific prompt
-        async function getAiCoordinates(imageFile, prompt) {
+        // REWRITTEN: Generic function to call the AI model with a specific image and prompt
+        async function callGeminiVision(imageFile, prompt) {
             if (!imageFile) return null;
             const imageData = await resizeAndEncodeImage(imageFile);
             const payload = {
@@ -357,17 +372,22 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.candidates?.[0]?.content?.parts?.[0]) {
-                        return JSON.parse(result.candidates[0].content.parts[0].text);
+                        try {
+                           return JSON.parse(result.candidates[0].content.parts[0].text);
+                        } catch (jsonError) {
+                            console.error("Failed to parse JSON from AI response:", jsonError, result.candidates[0].content.parts[0].text);
+                            return null; // Return null if JSON is malformed
+                        }
                     }
                 } else {
                     const errorText = await response.text();
                     console.error(`API Error:`, response.status, errorText);
                     if (errorText.includes("API key not valid")) {
-                        showModal("API Key Error: Key is not valid.");
+                        showModal("API Key Error: Your API key is not valid. Please check it in the code.");
                     }
                 }
             } catch (error) {
-                console.error(`Fetch error:`, error);
+                console.error(`Network or fetch error:`, error);
             }
             return null;
         }
