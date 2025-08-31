@@ -10,6 +10,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
         }
         .screen { display: none; }
         .active { display: flex; }
@@ -25,10 +26,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .preview-canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+        #camera-feed {
+            transform: scaleX(-1); /* Mirror the camera feed */
+        }
+        #pose-outline-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
         }
     </style>
 </head>
@@ -77,8 +84,6 @@
                 <h2 class="text-3xl font-bold mb-6 text-center">Create New Profile</h2>
                 <form id="new-profile-form" class="space-y-4">
                     <input type="text" id="name" placeholder="Name" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <input type="text" id="sports" placeholder="Primary Sport" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <input type="text" id="country" placeholder="Country" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <select id="gender" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                         <option value="" disabled selected>Select Gender</option>
                         <option value="Male">Male</option>
@@ -88,69 +93,41 @@
                         <input type="number" id="height" placeholder="Height (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                         <input type="number" id="weight" placeholder="Weight (kg)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Continue</button>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Start Scan</button>
                 </form>
             </div>
         </div>
-
-        <!-- Main Analysis Screen -->
-        <div id="main-analysis-screen" class="screen flex-col lg:flex-row p-8 gap-8 h-auto min-h-[80vh]">
-            <!-- Left Panel -->
-            <div class="w-full lg:w-1/3 space-y-6">
-                 <div class="flex justify-between items-center">
-                    <button id="back-to-dashboard-from-main" class="text-gray-400 hover:text-white flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Profiles</button>
-                    <button class="sign-out-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="log-out"></i> Sign Out</button>
+        
+        <!-- NEW: Camera Capture Screen -->
+        <div id="camera-screen" class="screen flex-col items-center justify-center h-[90vh] p-4 bg-black">
+            <div class="w-full max-w-md h-full flex flex-col items-center justify-between">
+                <div id="camera-instructions" class="text-center p-4">
+                    <h2 id="pose-title" class="text-2xl font-bold"></h2>
+                    <p id="pose-description" class="text-gray-400"></p>
                 </div>
-                <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
-                    <h3 class="text-2xl font-bold mb-4">Profile Details</h3>
-                    <div id="profile-display" class="space-y-2 text-gray-300"></div>
+                <div class="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-gray-900">
+                    <video id="camera-feed" class="w-full h-full object-cover" playsinline autoplay muted></video>
+                    <svg id="pose-outline-svg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet"></svg>
+                    <canvas id="capture-canvas" class="hidden"></canvas>
                 </div>
-                <div class="bg-gray-700 p-6 rounded-xl shadow-lg">
-                    <h3 class="text-2xl font-bold mb-4">Upload Images</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="front-image" class="block mb-1 font-semibold text-gray-300">Front View</label>
-                            <input type="file" id="front-image" accept="image/jpeg, image/png" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
-                        </div>
-                        <div>
-                            <label for="side-image" class="block mb-1 font-semibold text-gray-300">Side View</label>
-                            <input type="file" id="side-image" accept="image/jpeg, image/png" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
-                        </div>
-                        <div>
-                            <label for="back-image" class="block mb-1 font-semibold text-gray-300">Back View</label>
-                            <input type="file" id="back-image" accept="image/jpeg, image/png" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
-                        </div>
-                    </div>
-                </div>
-                 <button id="start-analysis-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl flex items-center justify-center gap-3"><i data-lucide="scan-line"></i> Analyze Body</button>
-            </div>
-
-            <!-- Right Panel -->
-            <div class="w-full lg:w-2/3 flex items-center justify-center">
-                <div id="image-previews" class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full w-full">
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
-                        <canvas id="front-canvas" class="preview-canvas rounded-xl"></canvas>
-                    </div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
-                        <canvas id="side-canvas" class="preview-canvas rounded-xl"></canvas>
-                    </div>
-                    <div class="bg-gray-700 rounded-xl aspect-w-3 aspect-h-4 flex items-center justify-center">
-                        <canvas id="back-canvas" class="preview-canvas rounded-xl"></canvas>
-                    </div>
-                </div>
-                <div id="analysis-loader-container" class="bg-gray-700 p-6 rounded-xl shadow-lg hidden flex-col items-center justify-center h-full w-full">
-                    <div class="loader"></div>
-                    <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
+                <div class="w-full flex items-center justify-around p-4">
+                     <button id="back-to-dashboard-from-camera" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-full"><i data-lucide="arrow-left"></i></button>
+                    <button id="capture-btn" class="bg-white text-black w-20 h-20 rounded-full border-4 border-gray-500 hover:bg-gray-200 transition-all"></button>
+                    <div class="w-12 h-12"></div> <!-- Spacer -->
                 </div>
             </div>
         </div>
-        
+
         <!-- Detailed Report Screen -->
         <div id="report-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-6">
+             <div id="analysis-loader" class="absolute inset-0 bg-gray-900 bg-opacity-90 z-50 flex-col items-center justify-center">
+                <div class="loader"></div>
+                <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
+            </div>
             <div class="w-full max-w-5xl mx-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-4xl font-bold">Analysis Report</h2>
-                    <button id="back-to-main-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="arrow-left"></i> Back to Analysis</button>
+                    <button id="back-to-camera-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="camera"></i> New Scan</button>
                 </div>
                 <section>
                     <h3 class="text-2xl font-semibold mb-4 mt-6">Measurements</h3>
@@ -167,19 +144,6 @@
                                 <p id="body-type-description" class="text-gray-300"></p>
                             </div>
                         </section>
-                        <section>
-                            <h3 class="text-2xl font-semibold mb-4 mt-6">Sports Recommendations</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="bg-gray-700 p-6 rounded-lg">
-                                    <h4 class="text-xl font-bold text-green-400 mb-2">Recommended Sports</h4>
-                                    <ul id="recommended-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
-                                </div>
-                                <div class="bg-gray-700 p-6 rounded-lg">
-                                    <h4 class="text-xl font-bold text-yellow-400 mb-2">Sports to Approach with Caution</h4>
-                                    <ul id="caution-sports-list" class="list-disc list-inside text-gray-300 space-y-1"></ul>
-                                </div>
-                            </div>
-                        </section>
                     </div>
                 </div>
             </div>
@@ -190,7 +154,6 @@
         </footer>
     </div>
 
-    <!-- Custom Modal -->
     <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-700 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-gray-600">
             <p id="modal-message" class="mb-6 text-lg">Message goes here.</p>
@@ -205,200 +168,182 @@
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBjU3yOJUIrN_cWsSdjyV067jWLGPsjHUI",
-            authDomain: "body-analyser8860.firebaseapp.com",
-            projectId: "body-analyser8860",
-            storageBucket: "body-analyser8860.appspot.com",
-            messagingSenderId: "412432296504",
-            appId: "1:412432296504:web:481c0ccd99e0f1645414cd",
-            measurementId: "G-6YF20DVRZE"
-        };
-        
+        const firebaseConfig = { apiKey: "AIzaSyBjU3yOJUIrN_cWsSdjyV067jWLGPsjHUI", authDomain: "body-analyser8860.firebaseapp.com", projectId: "body-analyser8860", storageBucket: "body-analyser8860.appspot.com", messagingSenderId: "412432296504", appId: "1:412432296504:web:481c0ccd99e0f1645414cd", measurementId: "G-6YF20DVRZE" };
         const GEMINI_API_KEY = "AIzaSyBzsQTdqE19YG5tFXcN_zhpGgm_2J_-b6Y";
 
-        let app, db, auth, userId;
-        let currentProfile = null;
-        let lastCalculatedMeasurements = null;
-        const imageState = { front: null, side: null, back: null };
-        
-        const screens = { loading: document.getElementById('loading-screen'), login: document.getElementById('login-screen'), dashboard: document.getElementById('profile-dashboard-screen'), newProfile: document.getElementById('new-profile-screen'), main: document.getElementById('main-analysis-screen'), report: document.getElementById('report-screen'), };
-        const modal = document.getElementById('custom-modal');
-        const modalMessage = document.getElementById('modal-message');
-        const modalButtons = document.getElementById('modal-buttons');
-        const newProfileForm = document.getElementById('new-profile-form');
-        const profileList = document.getElementById('profile-list');
-        const profileDisplay = document.getElementById('profile-display');
-        const resultsGrid = document.getElementById('results-grid');
-        const analysisLoaderContainer = document.getElementById('analysis-loader-container');
-        const analysisStatusText = document.getElementById('analysis-status-text');
-        const getInDepthAnalysisBtn = document.getElementById('get-in-depth-analysis-btn');
-        const inDepthLoader = document.getElementById('in-depth-loader');
-        const inDepthContent = document.getElementById('in-depth-content');
+        let app, db, auth, userId, currentProfile = null, lastCalculatedMeasurements = null;
+        const imageFiles = { front: null, side: null, back: null };
+        let currentPose = 'front';
+        let stream;
 
-        function showScreen(screenName) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[screenName].classList.add('active'); }
-        function showModal(message, onConfirm) { modalMessage.textContent = message; modalButtons.innerHTML = ''; if (onConfirm) { const cBtn = document.createElement('button'); cBtn.textContent = 'Confirm'; cBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg'; cBtn.onclick = () => { onConfirm(); modal.style.display = 'none'; }; modalButtons.appendChild(cBtn); const aBtn = document.createElement('button'); aBtn.textContent = 'Cancel'; aBtn.className = 'bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg'; aBtn.onclick = () => { modal.style.display = 'none'; }; modalButtons.appendChild(aBtn); } else { const okBtn = document.createElement('button'); okBtn.textContent = 'OK'; okBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg'; okBtn.onclick = () => { modal.style.display = 'none'; }; modalButtons.appendChild(okBtn); } modal.style.display = 'flex'; }
+        const screens = { loading: document.getElementById('loading-screen'), login: document.getElementById('login-screen'), dashboard: document.getElementById('profile-dashboard-screen'), newProfile: document.getElementById('new-profile-screen'), camera: document.getElementById('camera-screen'), report: document.getElementById('report-screen'), };
+        const modal = document.getElementById('custom-modal'); const modalMessage = document.getElementById('modal-message'); const modalButtons = document.getElementById('modal-buttons');
+        const newProfileForm = document.getElementById('new-profile-form'); const profileList = document.getElementById('profile-list');
+        const resultsGrid = document.getElementById('results-grid'); const analysisLoader = document.getElementById('analysis-loader'); const analysisStatusText = document.getElementById('analysis-status-text');
+        const getInDepthAnalysisBtn = document.getElementById('get-in-depth-analysis-btn'); const inDepthLoader = document.getElementById('in-depth-loader'); const inDepthContent = document.getElementById('in-depth-content');
+        const video = document.getElementById('camera-feed'); const poseSvg = document.getElementById('pose-outline-svg'); const captureCanvas = document.getElementById('capture-canvas'); const captureBtn = document.getElementById('capture-btn');
+        const poseTitle = document.getElementById('pose-title'); const poseDescription = document.getElementById('pose-description');
+
+        const POSE_DATA = {
+            front: { title: "Front Pose", description: "Face the camera with feet shoulder-width apart and arms slightly out.", svg: `<path d="M150 50 Q160 30 170 50 T190 50 T210 50 Q220 30 230 50 L250 120 Q260 180 230 200 L220 300 Q210 380 190 380 H110 Q90 380 80 300 L70 200 Q40 180 50 120 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>` },
+            side: { title: "Side Pose", description: "Turn 90 degrees to your right. Keep your arms straight at your sides.", svg: `<path d="M150 50 Q160 30 170 50 C190 80 190 120 170 150 L160 200 C150 250 140 300 150 350 L140 380 H130 L120 350 C130 300 120 250 110 200 L100 150 C80 120 80 80 100 50 Q110 30 120 50 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>` },
+            back: { title: "Back Pose", description: "Turn around, facing away from the camera. Stand straight.", svg: `<path d="M150 50 Q160 30 170 50 T190 50 T210 50 Q220 30 230 50 L250 120 Q260 180 230 200 L220 300 Q210 380 190 380 H110 Q90 380 80 300 L70 200 Q40 180 50 120 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>` }
+        };
+
+        function showScreen(screenName) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[screenName].classList.add('active'); if (screenName !== 'camera') stopCamera(); }
+        function showModal(message) { modalMessage.textContent = message; modal.style.display = 'flex'; document.getElementById('modal-close-btn').onclick = () => { modal.style.display = 'none'; }; }
 
         document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
         document.querySelectorAll('.sign-out-btn').forEach(btn => btn.addEventListener('click', handleSignOut));
         document.getElementById('go-to-new-profile-from-dashboard').addEventListener('click', () => showScreen('newProfile'));
         document.getElementById('back-to-dashboard-from-new').addEventListener('click', () => showScreen('dashboard'));
-        document.getElementById('back-to-dashboard-from-main').addEventListener('click', () => { resetMainScreen(); showScreen('dashboard'); });
-        document.getElementById('back-to-main-from-report').addEventListener('click', () => showScreen('main'));
-        document.getElementById('start-analysis-btn').addEventListener('click', runAutomatedAnalysis);
+        document.getElementById('back-to-dashboard-from-camera').addEventListener('click', () => showScreen('dashboard'));
+        document.getElementById('back-to-camera-from-report').addEventListener('click', () => startCameraWorkflow());
         getInDepthAnalysisBtn.addEventListener('click', handleInDepthAnalysis);
+        captureBtn.addEventListener('click', handleCapture);
 
-        async function initialize() { try { app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); onAuthStateChanged(auth, (user) => { if (user) { userId = user.uid; loadProfiles(); showScreen('dashboard'); } else { userId = null; currentProfile = null; showScreen('login'); } }); } catch (error) { console.error("Firebase init failed:", error); screens.loading.innerHTML = `<p class="text-red-500">Connection Error.</p>`; } }
+        async function initialize() { try { app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); onAuthStateChanged(auth, (user) => { if (user) { userId = user.uid; loadProfiles(); showScreen('dashboard'); } else { userId = null; currentProfile = null; showScreen('login'); } }); lucide.createIcons(); } catch (error) { console.error("Firebase init failed:", error); screens.loading.innerHTML = `<p class="text-red-500">Connection Error.</p>`; } }
         async function handleGoogleLogin() { const provider = new GoogleAuthProvider(); try { await signInWithPopup(auth, provider); } catch (error) { console.error("Sign-In Error:", error); showModal("Could not sign in."); } }
         async function handleSignOut() { try { await signOut(auth); } catch (error) { console.error("Sign Out Error:", error); } }
+        window.onload = initialize;
 
-        function drawPlaceholderOnCanvas(canvasKey, text) { const canvas = document.getElementById(`${canvasKey}-canvas`); if (!canvas) return; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#4B5563'; ctx.font = 'bold 20px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, canvas.width / 2, canvas.height / 2); }
-        function renderImageOnCanvas(canvasKey) { const canvas = document.getElementById(`${canvasKey}-canvas`); const image = imageState[canvasKey]; if (!canvas || !image) { drawPlaceholderOnCanvas(canvasKey, `${canvasKey.charAt(0).toUpperCase() + canvasKey.slice(1)} View`); return; } const ctx = canvas.getContext('2d'); const canvasRatio = canvas.width / canvas.height; const imageRatio = image.width / image.height; let dw, dh, x, y; if (canvasRatio > imageRatio) { dh = canvas.height; dw = dh * imageRatio; x = (canvas.width - dw) / 2; y = 0; } else { dw = canvas.width; dh = dw / imageRatio; x = 0; y = (canvas.height - dh) / 2; } ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, x, y, dw, dh); }
+        newProfileForm.addEventListener('submit', async (e) => { e.preventDefault(); if (!userId) { showModal("You must be signed in."); return; } const profileData = { name: document.getElementById('name').value, gender: document.getElementById('gender').value, height: parseFloat(document.getElementById('height').value), weight: parseFloat(document.getElementById('weight').value) }; try { const appId = 'body-measurement-app'; const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData); currentProfile = { id: docRef.id, ...profileData }; newProfileForm.reset(); startCameraWorkflow(); } catch (error) { console.error("Error adding document: ", error); showModal("Failed to save profile."); } });
+        async function loadProfiles() { if (!userId) return; const appId = 'body-measurement-app'; const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`); const q = query(profilesCol); const profileSnapshot = await getDocs(q); profileList.innerHTML = profileSnapshot.empty ? '<p class="text-center text-gray-500">No profiles found.</p>' : ''; profileSnapshot.forEach((doc) => { const profile = { id: doc.id, ...doc.data() }; const pElem = document.createElement('div'); pElem.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center'; pElem.innerHTML = `<div class="cursor-pointer flex-grow"><p class="font-bold text-lg">${profile.name}</p></div><button class="scan-profile-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="camera"></i> Scan</button>`; pElem.querySelector('.scan-profile-btn').onclick = () => { currentProfile = profile; startCameraWorkflow(); }; profileList.appendChild(pElem); }); lucide.createIcons(); }
 
-        window.onload = () => {
+        // --- NEW CAMERA WORKFLOW ---
+        async function startCameraWorkflow() {
+            showScreen('camera');
+            currentPose = 'front';
+            imageFiles.front = imageFiles.side = imageFiles.back = null;
+            updateCameraUI();
+            
+            try {
+                if (stream) { stream.getTracks().forEach(track => track.stop()); }
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 720, height: 960 }, audio: false });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Camera access error:", err);
+                showModal("Could not access the camera. Please check your browser permissions.");
+                showScreen('dashboard');
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+        
+        function updateCameraUI() {
+            const data = POSE_DATA[currentPose];
+            poseTitle.textContent = data.title;
+            poseDescription.textContent = data.description;
+            poseSvg.innerHTML = data.svg;
+            
+            if (currentPose === 'analysis') {
+                captureBtn.innerHTML = `<i data-lucide="scan-line"></i>`;
+                captureBtn.classList.remove('bg-white');
+                captureBtn.classList.add('bg-green-500', 'text-white');
+            } else {
+                captureBtn.innerHTML = '';
+                captureBtn.classList.add('bg-white');
+                captureBtn.classList.remove('bg-green-500', 'text-white');
+            }
             lucide.createIcons();
-            initialize();
-            ['front', 'side', 'back'].forEach(key => {
-                const canvas = document.getElementById(`${key}-canvas`);
-                const parent = canvas.parentElement;
-                const resizeCanvas = () => { canvas.width = parent.clientWidth; canvas.height = parent.clientHeight; renderImageOnCanvas(key); };
-                new ResizeObserver(resizeCanvas).observe(parent);
-                resizeCanvas();
-            });
-        };
+        }
 
-        newProfileForm.addEventListener('submit', async (e) => { e.preventDefault(); if (!userId) { showModal("You must be signed in."); return; } const profileData = { name: document.getElementById('name').value, sports: document.getElementById('sports').value, country: document.getElementById('country').value, gender: document.getElementById('gender').value, height: parseFloat(document.getElementById('height').value), weight: parseFloat(document.getElementById('weight').value), }; try { const appId = 'body-measurement-app'; const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData); currentProfile = { id: docRef.id, ...profileData }; updateMainScreen(); showScreen('main'); newProfileForm.reset(); } catch (error) { console.error("Error adding document: ", error); showModal("Failed to save profile."); } });
-        async function loadProfiles() { if (!userId) return; const appId = 'body-measurement-app'; const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`); const q = query(profilesCol); const profileSnapshot = await getDocs(q); profileList.innerHTML = profileSnapshot.empty ? '<p class="text-center text-gray-500">No profiles found.</p>' : ''; profileSnapshot.forEach((doc) => { const profile = { id: doc.id, ...doc.data() }; const pElem = document.createElement('div'); pElem.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center'; pElem.innerHTML = `<div class="cursor-pointer flex-grow"><p class="font-bold text-lg">${profile.name}</p><p class="text-sm text-gray-400">${profile.sports || 'N/A'}</p></div><button class="delete-profile-btn text-red-500 hover:text-red-400 p-2"><i data-lucide="trash-2"></i></button>`; pElem.querySelector('.cursor-pointer').onclick = () => { currentProfile = profile; updateMainScreen(); showScreen('main'); }; pElem.querySelector('.delete-profile-btn').onclick = () => { showModal(`Delete profile for ${profile.name}?`, async () => { try { await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/profiles`, profile.id)); loadProfiles(); } catch (error) { console.error("Error deleting profile:", error); showModal("Failed to delete profile."); } }); }; profileList.appendChild(pElem); }); lucide.createIcons(); }
-
-        function updateMainScreen() { if (!currentProfile) return; profileDisplay.innerHTML = `<p><strong>Name:</strong> ${currentProfile.name}</p><p><strong>Height:</strong> ${currentProfile.height} cm</p><p><strong>Weight:</strong> ${currentProfile.weight} kg</p>`; }
-        function resetMainScreen() { profileDisplay.innerHTML = ''; ['front', 'side', 'back'].forEach(key => { imageState[key] = null; document.getElementById(`${key}-image`).value = ''; renderImageOnCanvas(key); }); }
-        function setupImagePreview(inputId, canvasKey) { document.getElementById(inputId).addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) { imageState[canvasKey] = null; renderImageOnCanvas(canvasKey); return; } const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { imageState[canvasKey] = img; renderImageOnCanvas(canvasKey); }; img.src = e.target.result; }; reader.readAsDataURL(file); }); }
-        setupImagePreview('front-image', 'front');
-        setupImagePreview('side-image', 'side');
-        setupImagePreview('back-image', 'back');
-
-        // --- REWRITTEN: More Robust, Multi-Step Automated Analysis Flow ---
-        async function runAutomatedAnalysis() {
-            if (!currentProfile || !imageState.front || !imageState.side || !imageState.back) {
-                showModal("Please create a profile and upload all three images (front, side, and back) to begin analysis.");
+        function handleCapture() {
+            if (currentPose === 'analysis') {
+                runAutomatedAnalysis();
                 return;
             }
-            analysisLoaderContainer.style.display = 'flex';
-            document.getElementById('image-previews').style.display = 'none';
+
+            const context = captureCanvas.getContext('2d');
+            captureCanvas.width = video.videoWidth;
+            captureCanvas.height = video.videoHeight;
+            context.translate(video.videoWidth, 0);
+            context.scale(-1, 1);
+            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            
+            captureCanvas.toBlob(blob => {
+                imageFiles[currentPose] = new File([blob], `${currentPose}.jpg`, { type: 'image/jpeg' });
+                
+                if (currentPose === 'front') currentPose = 'side';
+                else if (currentPose === 'side') currentPose = 'back';
+                else if (currentPose === 'back') currentPose = 'analysis';
+
+                updateCameraUI();
+            }, 'image/jpeg');
+        }
+        
+        async function runAutomatedAnalysis() {
+            stopCamera();
+            showScreen('report');
+            analysisLoader.style.display = 'flex';
 
             try {
-                // Step 1: Get Height for Scaling from the front image
                 analysisStatusText.textContent = "Detecting body scale (1/4)...";
-                const heightPrompt = `From the provided front-view image of a person, return ONLY a valid JSON object with the pixel coordinates for the very top of the head ("top_of_head") and the bottom of the feet ("bottom_of_feet").`;
-                const heightCoords = await callGeminiVision(document.getElementById('front-image').files[0], heightPrompt);
+                const heightPrompt = `From the front-view image, return ONLY JSON with pixel coordinates for "top_of_head" and "bottom_of_feet".`;
+                const heightCoords = await callGeminiVision(imageFiles.front, heightPrompt);
+                if (!heightCoords?.top_of_head || !heightCoords?.bottom_of_feet) throw new Error("Could not determine height from the front photo.");
 
-                if (!heightCoords || !heightCoords.top_of_head || !heightCoords.bottom_of_feet) {
-                    showModal("The AI could not determine your height from the front photo. Please use a clearer, full-body image where your head and feet are fully visible.");
-                    throw new Error("AI height detection failed.");
-                }
-
-                // Step 2: Get Width Landmarks from the front image
                 analysisStatusText.textContent = "Analyzing front view (2/4)...";
-                const frontPrompt = `From the provided front-view image, return ONLY a valid JSON object with pixel coordinates for: shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
-                const frontCoords = await callGeminiVision(document.getElementById('front-image').files[0], frontPrompt);
-                 if (!frontCoords) {
-                    showModal("The AI could not identify landmarks on the front photo. Please ensure your arms are slightly away from your body and the lighting is good.");
-                    throw new Error("AI landmark identification failed on front image.");
-                }
+                const frontPrompt = `From the front-view image, return ONLY JSON with pixel coordinates for: shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
+                const frontCoords = await callGeminiVision(imageFiles.front, frontPrompt);
+                if (!frontCoords) throw new Error("Could not identify landmarks on the front photo.");
 
-                // Step 3: Get Depth Landmarks from the side image
                 analysisStatusText.textContent = "Analyzing side view (3/4)...";
-                const sidePrompt = `From the provided side-view image, return ONLY a valid JSON object with pixel coordinates for: chest_front, chest_back, waist_front, waist_back, hip_front, hip_back.`;
-                const sideCoords = await callGeminiVision(document.getElementById('side-image').files[0], sidePrompt);
-
-                if (!sideCoords) {
-                    showModal("The AI could not determine body depth from the side photo. Please use a clearer image with a plain background.");
-                    throw new Error("AI landmark identification failed on side image.");
-                }
-
-                // Step 4: (Optional but good practice) Get back landmarks
+                const sidePrompt = `From the side-view image, return ONLY JSON with pixel coordinates for: chest_front, chest_back, waist_front, waist_back, hip_front, hip_back.`;
+                const sideCoords = await callGeminiVision(imageFiles.side, sidePrompt);
+                if (!sideCoords) throw new Error("Could not determine body depth from the side photo.");
+                
                 analysisStatusText.textContent = "Analyzing back view (4/4)...";
-                const backPrompt = `From the provided back-view image, return ONLY a valid JSON object with pixel coordinates for shoulder_left_back and shoulder_right_back.`;
-                const backCoords = await callGeminiVision(document.getElementById('back-image').files[0], backPrompt);
-                // We can continue even if this one fails, as it's not critical for the current measurements.
+                const backPrompt = `From the back-view image, return ONLY JSON with pixel coordinates for shoulder_left_back and shoulder_right_back.`;
+                const backCoords = await callGeminiVision(imageFiles.back, backPrompt);
 
-                // Step 5: Combine results and calculate
                 analysisStatusText.textContent = "Calculating measurements...";
                 const allCoords = { ...heightCoords, ...frontCoords, ...sideCoords, ...backCoords };
-                
                 const pixelHeight = Math.abs(allCoords.top_of_head.y - allCoords.bottom_of_feet.y);
                 const pixelsPerCm = pixelHeight > 0 ? pixelHeight / currentProfile.height : 0;
-
-                if (pixelsPerCm === 0) {
-                    showModal("Could not determine body scale from the photo. This is an unexpected error.");
-                    throw new Error("Failed to calculate pixelsPerCm ratio.");
-                }
+                if (pixelsPerCm === 0) throw new Error("Could not calculate body scale.");
 
                 const measurements = calculateMeasurements(allCoords, pixelsPerCm);
                 lastCalculatedMeasurements = measurements;
                 displayBasicReport(measurements);
-                showScreen('report');
 
             } catch (error) {
                  console.error("Automated analysis failed:", error);
-                 if (!modal.style.display || modal.style.display === 'none') {
-                    showModal("An unexpected error occurred during the analysis. Please try again or check the console for details.");
-                 }
+                 showModal(error.message || "An unexpected error occurred during analysis.");
+                 showScreen('camera'); // Go back to camera on failure
             } finally {
-                analysisLoaderContainer.style.display = 'none';
-                document.getElementById('image-previews').style.display = 'grid';
+                analysisLoader.style.display = 'none';
             }
         }
         
         function resizeAndEncodeImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; const maxWidth = 512; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const base64 = canvas.toDataURL(file.type).split(',')[1]; resolve({ mimeType: file.type, base64 }); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 
-        // REWRITTEN: Generic function to call the AI model with a specific image and prompt
         async function callGeminiVision(imageFile, prompt) {
             if (!imageFile) return null;
             const imageData = await resizeAndEncodeImage(imageFile);
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: prompt },
-                        { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } }
-                    ]
-                }],
-                generationConfig: { responseMimeType: "application/json", temperature: 0 }
-            };
+            const payload = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) {
                     const result = await response.json();
                     if (result.candidates?.[0]?.content?.parts?.[0]) {
-                        try {
-                           return JSON.parse(result.candidates[0].content.parts[0].text);
-                        } catch (jsonError) {
-                            console.error("Failed to parse JSON from AI response:", jsonError, result.candidates[0].content.parts[0].text);
-                            return null; // Return null if JSON is malformed
-                        }
+                        try { return JSON.parse(result.candidates[0].content.parts[0].text); } catch (jsonError) { console.error("Failed to parse JSON:", jsonError); return null; }
                     }
-                } else {
-                    const errorText = await response.text();
-                    console.error(`API Error:`, response.status, errorText);
-                    if (errorText.includes("API key not valid")) {
-                        showModal("API Key Error: Your API key is not valid. Please check it in the code.");
-                    }
-                }
-            } catch (error) {
-                console.error(`Network or fetch error:`, error);
-            }
+                } else { const errorText = await response.text(); console.error(`API Error:`, response.status, errorText); if (errorText.includes("API key not valid")) showModal("API Key Error: Key is not valid."); }
+            } catch (error) { console.error(`Fetch error:`, error); }
             return null;
         }
 
         function calculateMeasurements(coords, pixelsPerCm) {
-            const measurements = {};
-            const pi = Math.PI;
-            const getCircumference = (widthCm, depthCm) => { if (!widthCm || !depthCm || widthCm <= 0 || depthCm <= 0) return 0; const a = widthCm / 2; const b = depthCm / 2; return pi * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b))); };
-            
+            const measurements = {}; const pi = Math.PI;
+            const getCircumference = (w, d) => { if (!w || !d || w <= 0 || d <= 0) return 0; const a = w / 2, b = d / 2; return pi * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b))); };
             const pxToCm = (px) => px / pixelsPerCm;
-
             measurements["Shoulder Width"] = pxToCm(Math.abs((coords?.shoulder_left?.x || 0) - (coords?.shoulder_right?.x || 0)));
             measurements["Chest"] = getCircumference(pxToCm(Math.abs((coords?.chest_left?.x || 0) - (coords?.chest_right?.x || 0))), pxToCm(Math.abs((coords?.chest_front?.x || 0) - (coords?.chest_back?.x || 0))));
             measurements["Waist"] = getCircumference(pxToCm(Math.abs((coords?.waist_left?.x || 0) - (coords?.waist_right?.x || 0))), pxToCm(Math.abs((coords?.waist_front?.x || 0) - (coords?.waist_back?.x || 0))));
@@ -407,15 +352,10 @@
         }
 
         async function getAiPhysiqueAnalysis(measurements) {
-            const prompt = `Given these measurements for a ${currentProfile.gender}, analyze the physique for somatotype and sports recommendations. Return ONLY a valid JSON object with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }) keys. Data: ${JSON.stringify(measurements, null, 2)}`;
+            const prompt = `Given these measurements for a ${currentProfile.gender}, analyze physique for somatotype and sports recommendations. Return ONLY valid JSON with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }). Data: ${JSON.stringify(measurements, null, 2)}`;
             const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-            try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } }
-                else { console.error(`Analysis API Error:`, response.status, await response.text()); }
-            } catch (error) { console.error(`Analysis Fetch error:`, error); }
-            return null;
+            try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } } else { console.error(`Analysis API Error:`, response.status, await response.text()); } } catch (error) { console.error(`Analysis Fetch error:`, error); } return null;
         }
         
         async function handleInDepthAnalysis() {
@@ -424,8 +364,7 @@
             inDepthLoader.style.display = 'flex';
             const analysis = await getAiPhysiqueAnalysis(lastCalculatedMeasurements);
             if (analysis?.bodyType && analysis?.sportsRecommendation) {
-                document.getElementById('body-type-title').textContent = analysis.bodyType.type;
-                document.getElementById('body-type-description').textContent = analysis.bodyType.description;
+                document.getElementById('body-type-title').textContent = analysis.bodyType.type; document.getElementById('body-type-description').textContent = analysis.bodyType.description;
                 document.getElementById('recommended-sports-list').innerHTML = analysis.sportsRecommendation.recommended.map(s => `<li>${s}</li>`).join('');
                 document.getElementById('caution-sports-list').innerHTML = analysis.sportsRecommendation.caution.map(s => `<li>${s}</li>`).join('');
                 inDepthContent.classList.remove('hidden');
@@ -448,3 +387,5 @@
     </script>
 </body>
 </html>
+
+
