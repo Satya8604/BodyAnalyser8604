@@ -3,400 +3,861 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Body Measurement Analysis</title>
+    <title>AI Body Measurement</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
-        }
-        .screen { display: none; }
-        .active { display: flex; }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #camera-feed {
-            transform: scaleX(-1); /* Mirror the camera feed */
-        }
-        #pose-outline-svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-        }
+    
+    <!-- MediaPipe Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-in forwards; }
+        @keyframes slideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1F2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4 pb-12 overflow-x-hidden relative">
 
-    <div id="app-container" class="w-full max-w-6xl mx-auto bg-gray-800 rounded-2xl shadow-2xl overflow-hidden relative pb-12">
+    <!-- Custom Notification Container -->
+    <div id="notification-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-md pointer-events-none"></div>
 
-        <!-- Loading Screen -->
-        <div id="loading-screen" class="screen active flex-col items-center justify-center h-[80vh]">
-            <div class="loader"></div>
-            <p class="mt-4 text-lg text-gray-400">Initializing AI Analysis Engine...</p>
+    <!-- ========================================== -->
+    <!-- SCREEN 1: PROFILE HUB                      -->
+    <!-- ========================================== -->
+    <div id="screen-profiles" class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden p-8 min-h-[80vh] flex flex-col md:flex-row gap-8 transition-opacity duration-300">
+        
+        <!-- Saved Profiles List -->
+        <div class="w-full md:w-1/2 flex flex-col">
+            <h1 class="text-4xl font-bold text-white mb-2">Measurement AI</h1>
+            <p class="text-gray-400 mb-8">Select a profile to begin your analysis.</p>
+            
+            <div class="flex-grow bg-gray-850 rounded-xl p-4 border border-gray-700 custom-scrollbar overflow-y-auto max-h-[60vh]">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4 border-b border-gray-700 pb-2">Saved Profiles</h2>
+                <div id="profileCardsContainer" class="space-y-3">
+                    <!-- Profile cards injected here via JS -->
+                    <p class="text-gray-500 text-sm italic">No profiles found. Create one to get started!</p>
+                </div>
+            </div>
         </div>
 
-        <!-- Login Screen -->
-        <div id="login-screen" class="screen flex-col items-center justify-center h-[80vh] p-8 text-center">
-            <h1 class="text-5xl font-bold text-white mb-4">Body Composition AI</h1>
-            <p class="text-xl text-gray-400 mb-12 max-w-2xl">Sign in with your Google account to save and manage your personal body measurement profiles.</p>
-            <button id="google-login-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-transform transform hover:scale-105 shadow-lg flex items-center gap-3">
-                <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.222 0-9.519-3.487-11.181-8.264l-6.522 5.025C9.505 39.556 16.227 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 36.49 44 30.638 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
-                Sign In with Google
-            </button>
-        </div>
+        <!-- Create New Profile Form -->
+        <div class="w-full md:w-1/2 bg-gray-700 p-6 rounded-xl shadow-inner border border-gray-600 custom-scrollbar overflow-y-auto max-h-[75vh]">
+            <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-600 pb-2">Create New Profile</h2>
+            <div class="space-y-4 mt-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Full Name *</label>
+                    <input type="text" id="newName" placeholder="e.g. Rahul Sharma" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Gender *</label>
+                        <select id="newGender" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="">Select...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Height (cm) *</label>
+                        <input type="number" id="newHeight" placeholder="175" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
 
-        <!-- Profile Dashboard Screen -->
-        <div id="profile-dashboard-screen" class="screen flex-col items-center justify-start h-auto min-h-[80vh] p-8">
-             <div class="w-full max-w-3xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold">Your Profiles</h2>
-                    <button class="sign-out-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
-                        <i data-lucide="log-out"></i> Sign Out
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Weight (kg) *</label>
+                        <input type="number" id="newWeight" placeholder="70" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Primary Sport</label>
+                        <input type="text" id="newSports" placeholder="e.g. Cricket" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Country</label>
+                    <input type="text" id="newCountry" placeholder="e.g. India" class="w-full p-2.5 bg-gray-800 rounded-lg border border-gray-600 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                
+                <!-- Advanced Skinfolds -->
+                <div class="mt-6 p-4 bg-gray-850 rounded-lg border border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-300 mb-3">Advanced Skinfolds (mm) <span class="text-xs text-gray-500 font-normal">- Optional</span></h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Triceps</label>
+                            <input type="number" id="sfTriceps" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Subscap</label>
+                            <input type="number" id="sfSubScap" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Biceps</label>
+                            <input type="number" id="sfBiceps" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Iliac Crest</label>
+                            <input type="number" id="sfIliac" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Supra Sp.</label>
+                            <input type="number" id="sfSupra" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase">Abdominal</label>
+                            <input type="number" id="sfAbdom" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                        <div class="col-span-3">
+                            <label class="text-[10px] text-gray-500 uppercase">Thigh</label>
+                            <input type="number" id="sfThigh" class="w-full p-1.5 bg-gray-700 rounded border border-gray-600 text-white text-xs text-center focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="addProfile()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition mt-4 shadow-lg">Save New Profile</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- SCREEN 2: ANALYSIS STUDIO                  -->
+    <!-- ========================================== -->
+    <div id="screen-main" class="hidden w-full max-w-7xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] relative transition-opacity duration-300">
+        
+        <!-- Left Panel: Controls & Live Stats -->
+        <div class="w-full md:w-[35%] p-6 bg-gray-850 border-r border-gray-700 flex flex-col custom-scrollbar overflow-y-auto z-10">
+            
+            <div class="flex items-center justify-between mb-6 border-b border-gray-700 pb-4">
+                <button onclick="goBackToProfiles()" class="text-gray-400 hover:text-white flex items-center gap-2 text-sm transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Change Profile
+                </button>
+                <span class="text-xs bg-indigo-900 text-indigo-300 px-2 py-1 rounded font-bold">Studio Mode</span>
+            </div>
+            
+            <!-- Active Profile Details -->
+            <div class="bg-gray-700 p-4 rounded-xl mb-6 shadow-inner flex-shrink-0 border border-gray-600 relative overflow-hidden">
+                <div class="absolute top-0 right-0 bg-gray-600 text-xs px-2 py-1 rounded-bl-lg font-semibold">Active</div>
+                <h2 id="activeProfileName" class="text-2xl font-bold text-white mb-1 truncate pr-12">Name</h2>
+                <div class="text-sm text-gray-300 grid grid-cols-2 gap-y-1 mt-2">
+                    <p><span class="text-gray-500">Gender:</span> <span id="activeProfileGender"></span></p>
+                    <p><span class="text-gray-500">Height:</span> <span id="activeProfileHeight"></span> cm</p>
+                    <p><span class="text-gray-500">Weight:</span> <span id="activeProfileWeight"></span> kg</p>
+                    <p><span class="text-gray-500">Sport:</span> <span id="activeProfileSport" class="truncate"></span></p>
+                </div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="bg-gray-700 p-4 rounded-xl mb-6 shadow-inner flex-shrink-0">
+                <h2 class="text-lg font-semibold text-gray-200 mb-3">Vision Controls</h2>
+                <div class="space-y-3">
+                    <button id="startBtn" onclick="startCamera()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg">Turn Camera On</button>
+                    <button id="stopBtn" onclick="stopCamera()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg hidden">Turn Camera Off</button>
+                    
+                    <!-- 360 Scan Section -->
+                    <div id="scanContainer" class="hidden space-y-2 mt-2 p-3 bg-gray-800 rounded-lg border border-blue-500/30">
+                        <button id="scanBtn" onclick="startScan()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Start 360° Scan
+                        </button>
+                        <div id="scanProgressContainer" class="hidden w-full bg-gray-700 rounded-full h-3 mt-2">
+                            <div id="scanProgressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="scanText" class="text-xs text-center text-blue-400 hidden mt-1 font-semibold animate-pulse">Scanning... Spin 360° slowly.</p>
+                    </div>
+
+                    <button id="saveBtn" onclick="saveSnapshot()" disabled class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">Save Current Snapshot</button>
+                    <button id="analyzeBtn" onclick="generateAIReport()" disabled class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Generate AI Report
                     </button>
                 </div>
-                <button id="go-to-new-profile-from-dashboard" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mb-6">
-                    + Add New Profile
-                </button>
-                <div id="profile-list" class="space-y-3"></div>
+                <p id="statusText" class="mt-4 text-sm text-center text-gray-400 font-medium min-h-[20px]">Awaiting camera start...</p>
             </div>
-        </div>
 
-        <!-- New Profile Screen -->
-        <div id="new-profile-screen" class="screen flex-col items-center justify-center h-auto p-8">
-            <div class="w-full max-w-lg">
-                <button id="back-to-dashboard-from-new" class="mb-6 text-gray-400 hover:text-white flex items-center gap-2">
-                    <i data-lucide="arrow-left"></i> Back to Profiles
-                </button>
-                <h2 class="text-3xl font-bold mb-6 text-center">Create New Profile</h2>
-                <form id="new-profile-form" class="space-y-4">
-                    <input type="text" id="name" placeholder="Name" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <select id="gender" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                        <option value="" disabled selected>Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input type="number" id="height" placeholder="Height (cm)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
-                        <input type="number" id="weight" placeholder="Weight (kg)" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" required step="any">
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg mt-4">Save and Start Scan</button>
-                </form>
-            </div>
-        </div>
-        
-        <!-- NEW: Camera Capture Screen -->
-        <div id="camera-screen" class="screen flex-col items-center justify-center h-[90vh] p-4 bg-black">
-            <div class="w-full max-w-md h-full flex flex-col items-center justify-between">
-                <div id="camera-instructions" class="text-center p-4">
-                    <h2 id="pose-title" class="text-2xl font-bold"></h2>
-                    <p id="pose-description" class="text-gray-400"></p>
-                </div>
-                <div class="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-gray-900">
-                    <video id="camera-feed" class="w-full h-full object-cover" playsinline autoplay muted></video>
-                    <svg id="pose-outline-svg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet"></svg>
-                    <canvas id="capture-canvas" class="hidden"></canvas>
-                </div>
-                <div class="w-full flex items-center justify-around p-4">
-                     <button id="back-to-dashboard-from-camera" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-full"><i data-lucide="arrow-left"></i></button>
-                    <button id="capture-btn" class="bg-white text-black w-20 h-20 rounded-full border-4 border-gray-500 hover:bg-gray-200 transition-all"></button>
-                    <div class="w-12 h-12"></div> <!-- Spacer -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Detailed Report Screen -->
-        <div id="report-screen" class="screen flex-col h-auto min-h-[80vh] p-8 space-y-6">
-             <div id="analysis-loader" class="absolute inset-0 bg-gray-900 bg-opacity-90 z-50 flex-col items-center justify-center">
-                <div class="loader"></div>
-                <p id="analysis-status-text" class="mt-4 text-lg text-gray-400">AI is generating your report...</p>
-            </div>
-            <div class="w-full max-w-5xl mx-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-4xl font-bold">Analysis Report</h2>
-                    <button id="back-to-camera-from-report" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="camera"></i> New Scan</button>
-                </div>
-                <section>
-                    <h3 class="text-2xl font-semibold mb-4 mt-6">Measurements</h3>
-                    <div id="results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center"></div>
-                </section>
-                <div id="in-depth-analysis-section" class="space-y-6">
-                    <button id="get-in-depth-analysis-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg">Get In-Depth AI Analysis</button>
-                    <div id="in-depth-loader" class="hidden flex-col items-center justify-center"><div class="loader"></div><p class="mt-2 text-gray-400">Generating analysis...</p></div>
-                    <div id="in-depth-content" class="hidden space-y-6">
-                        <section>
-                            <h3 class="text-2xl font-semibold mb-4 mt-6">Body Type Analysis</h3>
-                            <div class="bg-gray-700 p-6 rounded-lg">
-                                <h4 id="body-type-title" class="text-xl font-bold text-indigo-400 mb-2"></h4>
-                                <p id="body-type-description" class="text-gray-300"></p>
-                            </div>
-                        </section>
+            <!-- Live Stats -->
+            <div class="mt-auto flex-shrink-0">
+                <h2 class="text-xl font-bold mb-3 text-gray-300">Live Estimates</h2>
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-600 shadow-inner">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <p class="flex justify-between text-gray-400">Shoulder: <span id="valShoulder" class="text-white font-semibold">-- cm</span></p>
+                        <p class="flex justify-between text-gray-400">Chest C.: <span id="valChest" class="text-white font-semibold">-- cm</span></p>
+                        
+                        <p class="flex justify-between text-gray-400">Hip: <span id="valHip" class="text-white font-semibold">-- cm</span></p>
+                        <p class="flex justify-between text-gray-400">Waist C.: <span id="valWaist" class="text-white font-semibold">-- cm</span></p>
+                        
+                        <p class="flex justify-between text-gray-400">Arm: <span id="valArm" class="text-white font-semibold">-- cm</span></p>
+                        <p class="flex justify-between text-gray-400">Thigh C.: <span id="valThighs" class="text-white font-semibold">-- cm</span></p>
+                        
+                        <p class="flex justify-between text-gray-400">Neck C.: <span id="valNeck" class="text-white font-semibold">-- cm</span></p>
+                        <p class="flex justify-between text-gray-400">Wrist C.: <span id="valWrist" class="text-white font-semibold">-- cm</span></p>
+                        
+                        <p class="flex justify-between text-gray-400 col-span-2">Ankle Circ.: <span id="valAnkle" class="text-white font-semibold">-- cm</span></p>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <footer class="absolute bottom-0 left-0 right-0 p-4 text-center text-gray-500 text-sm">
-            Made by <a href="https://www.linkedin.com/in/satya-kulthe/" target="_blank" class="text-indigo-400 hover:underline">Satya Kulthe</a>
-        </footer>
-    </div>
 
-    <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
-        <div class="bg-gray-700 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-gray-600">
-            <p id="modal-message" class="mb-6 text-lg">Message goes here.</p>
-            <div id="modal-buttons" class="flex justify-center gap-4">
-                 <button id="modal-close-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg">OK</button>
+        <!-- Right Panel: Camera Feed -->
+        <div class="w-full md:w-[65%] bg-black flex items-center justify-center relative overflow-hidden shadow-inner">
+            <!-- Hidden video element for MediaPipe input -->
+            <video id="input_video" class="hidden" playsinline></video>
+            
+            <!-- Visible canvas for drawing the output -->
+            <canvas id="output_canvas" class="w-full h-full object-contain hidden"></canvas>
+            
+            <div id="offlineText" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 text-2xl font-semibold bg-gray-900">
+                <svg class="w-16 h-16 mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Camera Offline
+            </div>
+
+            <!-- Initialization Loader -->
+            <div id="camLoader" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 z-20 hidden">
+                <div class="w-12 h-12 border-4 border-gray-600 border-t-indigo-500 rounded-full animate-spin"></div>
+                <p class="mt-4 text-indigo-400 font-semibold">Initializing AI Vision...</p>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- AI Report Modal -->
+    <div id="aiModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-4xl w-full border border-gray-600 max-h-[90vh] overflow-y-auto relative">
+            <button onclick="closeAIModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            <h2 class="text-3xl font-bold mb-6 text-purple-400 flex items-center gap-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                AI Physique Analysis
+            </h2>
+            
+            <div id="aiLoader" class="flex flex-col items-center justify-center py-12">
+                <div class="w-12 h-12 border-4 border-gray-600 border-t-purple-500 rounded-full animate-spin"></div>
+                <p class="mt-6 text-gray-400 text-lg">Analyzing physical proportions via Gemini...</p>
+            </div>
 
-        const firebaseConfig = { apiKey: "AIzaSyBjU3yOJUIrN_cWsSdjyV067jWLGPsjHUI", authDomain: "body-analyser8860.firebaseapp.com", projectId: "body-analyser8860", storageBucket: "body-analyser8860.appspot.com", messagingSenderId: "412432296504", appId: "1:412432296504:web:481c0ccd99e0f1645414cd", measurementId: "G-6YF20DVRZE" };
-        const GEMINI_API_KEY = "AIzaSyBzsQTdqE19YG5tFXcN_zhpGgm_2J_-b6Y";
+            <div id="aiContent" class="hidden space-y-6">
+                <div class="bg-gray-700 p-6 rounded-xl shadow-inner border border-gray-600">
+                    <h3 class="text-xl font-bold text-white mb-2 uppercase tracking-wide text-sm text-gray-400">Somatotype (Heath-Carter Analysis)</h3>
+                    <p id="aiBodyType" class="text-2xl text-purple-300 font-bold mb-2"></p>
+                    <p id="aiDescription" class="text-gray-300 leading-relaxed"></p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-700 p-6 rounded-xl border-t-4 border-green-500 shadow-inner">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Recommended Sports
+                        </h3>
+                        <ul id="aiRecommended" class="list-disc list-inside text-gray-300 space-y-2"></ul>
+                    </div>
+                    <div class="bg-gray-700 p-6 rounded-xl border-t-4 border-yellow-500 shadow-inner">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Approach With Caution
+                        </h3>
+                        <ul id="aiCaution" class="list-disc list-inside text-gray-300 space-y-2"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        let app, db, auth, userId, currentProfile = null, lastCalculatedMeasurements = null;
-        const imageFiles = { front: null, side: null, back: null };
-        let currentPose = 'front';
-        let stream;
+    <!-- Constant Footer -->
+    <footer class="fixed bottom-3 w-full text-center text-gray-500 text-xs sm:text-sm z-40 pointer-events-none">
+        <span class="pointer-events-auto bg-gray-900/60 px-4 py-1 rounded-full backdrop-blur-sm">
+            Made by <a href="https://www.linkedin.com/in/satya-kulthe/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:text-indigo-300 transition hover:underline">Satya Kulthe</a>
+        </span>
+    </footer>
 
-        const screens = { loading: document.getElementById('loading-screen'), login: document.getElementById('login-screen'), dashboard: document.getElementById('profile-dashboard-screen'), newProfile: document.getElementById('new-profile-screen'), camera: document.getElementById('camera-screen'), report: document.getElementById('report-screen'), };
-        const modal = document.getElementById('custom-modal'); const modalMessage = document.getElementById('modal-message'); const modalButtons = document.getElementById('modal-buttons');
-        const newProfileForm = document.getElementById('new-profile-form'); const profileList = document.getElementById('profile-list');
-        const resultsGrid = document.getElementById('results-grid'); const analysisLoader = document.getElementById('analysis-loader'); const analysisStatusText = document.getElementById('analysis-status-text');
-        const getInDepthAnalysisBtn = document.getElementById('get-in-depth-analysis-btn'); const inDepthLoader = document.getElementById('in-depth-loader'); const inDepthContent = document.getElementById('in-depth-content');
-        const video = document.getElementById('camera-feed'); const poseSvg = document.getElementById('pose-outline-svg'); const captureCanvas = document.getElementById('capture-canvas'); const captureBtn = document.getElementById('capture-btn');
-        const poseTitle = document.getElementById('pose-title'); const poseDescription = document.getElementById('pose-description');
+    <script>
+        // --- Gemini Configuration ---
+        const apiKey = "AIzaSyBzsQTdqE19YG5tFXcN_zhpGgm_2J_-b6Y"; // Provided API key
 
-        const POSE_DATA = {
-            front: {
-                title: "Front Pose",
-                description: "Face the camera, feet shoulder-width apart, arms slightly out.",
-                svg: `<path d="M150 40 C135 40 130 50 130 60 L125 100 C110 105 100 120 105 140 L115 190 L105 200 L100 220 C95 230 100 240 110 240 L115 235 L120 380 H140 L140 250 L160 250 L160 380 H180 L185 235 L190 240 C200 240 205 230 200 220 L195 200 L185 190 L195 140 C200 120 190 105 175 100 L170 60 C170 50 165 40 150 40 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>`
-            },
-            side: {
-                title: "Side Pose",
-                description: "Turn 90 degrees to your right. Keep your arms straight at your sides.",
-                svg: `<path d="M150 40 C160 40 165 50 165 60 L160 90 C165 100 170 120 165 140 L160 180 L165 240 L160 380 H140 L135 240 L130 160 C125 120 125 90 140 80 L140 60 C140 50 140 40 150 40 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>`
-            },
-            back: {
-                title: "Back Pose",
-                description: "Turn around, facing away from the camera. Stand straight.",
-                svg: `<path d="M150 40 C135 40 130 50 130 60 L125 100 C110 105 100 120 105 140 L115 190 L105 200 L100 220 C95 230 100 240 110 240 L115 235 L120 380 H140 L140 250 L160 250 L160 380 H180 L185 235 L190 240 C200 240 205 230 200 220 L195 200 L185 190 L195 140 C200 120 190 105 175 100 L170 60 C170 50 165 40 150 40 Z" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>`
-            }
+        // --- Local Storage Key ---
+        const STORAGE_KEY = 'ai_body_measure_profiles_v1';
+
+        // --- Application State ---
+        let profiles = [];
+        let currentProfile = null;
+        let isCameraRunning = false;
+        
+        // 360 Scan State
+        let isScanning = false;
+        let scanFramesCount = 0;
+        const maxScanFrames = 100; // Approx 3-4 seconds depending on framerate
+        let maxShoulderCm = 0.0;
+        let maxHipCm = 0.0;
+
+        // Current real-time measurements
+        let liveMeasurements = null;
+
+        // MediaPipe and Camera variables
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        let camera = null;
+        let pose = null;
+
+        // --- Initialization ---
+        window.onload = () => {
+            loadProfilesFromStorage();
+            initMediaPipe();
         };
 
-        function showScreen(screenName) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[screenName].classList.add('active'); if (screenName !== 'camera') stopCamera(); }
-        function showModal(message) { modalMessage.textContent = message; modal.style.display = 'flex'; document.getElementById('modal-close-btn').onclick = () => { modal.style.display = 'none'; }; }
-
-        document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
-        document.querySelectorAll('.sign-out-btn').forEach(btn => btn.addEventListener('click', handleSignOut));
-        document.getElementById('go-to-new-profile-from-dashboard').addEventListener('click', () => showScreen('newProfile'));
-        document.getElementById('back-to-dashboard-from-new').addEventListener('click', () => showScreen('dashboard'));
-        document.getElementById('back-to-dashboard-from-camera').addEventListener('click', () => showScreen('dashboard'));
-        document.getElementById('back-to-camera-from-report').addEventListener('click', () => startCameraWorkflow());
-        getInDepthAnalysisBtn.addEventListener('click', handleInDepthAnalysis);
-        captureBtn.addEventListener('click', handleCapture);
-
-        async function initialize() { try { app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); onAuthStateChanged(auth, (user) => { if (user) { userId = user.uid; loadProfiles(); showScreen('dashboard'); } else { userId = null; currentProfile = null; showScreen('login'); } }); lucide.createIcons(); } catch (error) { console.error("Firebase init failed:", error); screens.loading.innerHTML = `<p class="text-red-500">Connection Error.</p>`; } }
-        async function handleGoogleLogin() { const provider = new GoogleAuthProvider(); try { await signInWithPopup(auth, provider); } catch (error) { console.error("Sign-In Error:", error); showModal("Could not sign in."); } }
-        async function handleSignOut() { try { await signOut(auth); } catch (error) { console.error("Sign Out Error:", error); } }
-        window.onload = initialize;
-
-        newProfileForm.addEventListener('submit', async (e) => { e.preventDefault(); if (!userId) { showModal("You must be signed in."); return; } const profileData = { name: document.getElementById('name').value, gender: document.getElementById('gender').value, height: parseFloat(document.getElementById('height').value), weight: parseFloat(document.getElementById('weight').value) }; try { const appId = 'body-measurement-app'; const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/profiles`), profileData); currentProfile = { id: docRef.id, ...profileData }; newProfileForm.reset(); startCameraWorkflow(); } catch (error) { console.error("Error adding document: ", error); showModal("Failed to save profile."); } });
-        async function loadProfiles() { if (!userId) return; const appId = 'body-measurement-app'; const profilesCol = collection(db, `artifacts/${appId}/users/${userId}/profiles`); const q = query(profilesCol); const profileSnapshot = await getDocs(q); profileList.innerHTML = profileSnapshot.empty ? '<p class="text-center text-gray-500">No profiles found.</p>' : ''; profileSnapshot.forEach((doc) => { const profile = { id: doc.id, ...doc.data() }; const pElem = document.createElement('div'); pElem.className = 'bg-gray-700 p-4 rounded-lg flex justify-between items-center'; pElem.innerHTML = `<div class="cursor-pointer flex-grow"><p class="font-bold text-lg">${profile.name}</p></div><button class="scan-profile-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2"><i data-lucide="camera"></i> Scan</button>`; pElem.querySelector('.scan-profile-btn').onclick = () => { currentProfile = profile; startCameraWorkflow(); }; profileList.appendChild(pElem); }); lucide.createIcons(); }
-
-        // --- NEW CAMERA WORKFLOW ---
-        async function startCameraWorkflow() {
-            showScreen('camera');
-            currentPose = 'front';
-            imageFiles.front = imageFiles.side = imageFiles.back = null;
-            updateCameraUI();
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
             
-            try {
-                if (stream) { stream.getTracks().forEach(track => track.stop()); }
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 720, height: 960 }, audio: false });
-                video.srcObject = stream;
-            } catch (err) {
-                console.error("Camera access error:", err);
-                showModal("Could not access the camera. Please check your browser permissions.");
-                showScreen('dashboard');
-            }
+            let bgClass = 'bg-blue-600';
+            if(type === 'success') bgClass = 'bg-green-600';
+            if(type === 'error') bgClass = 'bg-red-600';
+            if(type === 'warning') bgClass = 'bg-yellow-600';
+
+            toast.className = `${bgClass} text-white px-6 py-3 rounded-lg shadow-lg font-medium text-sm toast-enter flex items-center justify-center`;
+            toast.innerText = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.replace('toast-enter', 'toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-        }
-        
-        function updateCameraUI() {
-            const data = POSE_DATA[currentPose];
-            poseTitle.textContent = data.title;
-            poseDescription.textContent = data.description;
-            poseSvg.innerHTML = data.svg;
-            
-            if (currentPose === 'analysis') {
-                captureBtn.innerHTML = `<i data-lucide="scan-line"></i>`;
-                captureBtn.classList.remove('bg-white');
-                captureBtn.classList.add('bg-green-500', 'text-white');
+        // --- Storage & Profile Management ---
+        function loadProfilesFromStorage() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    profiles = JSON.parse(stored);
+                } catch(e) {
+                    profiles = [];
+                }
             } else {
-                captureBtn.innerHTML = '';
-                captureBtn.classList.add('bg-white');
-                captureBtn.classList.remove('bg-green-500', 'text-white');
+                profiles = [];
             }
-            lucide.createIcons();
+            renderProfileList();
         }
 
-        function handleCapture() {
-            if (currentPose === 'analysis') {
-                runAutomatedAnalysis();
+        function saveProfilesToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+        }
+
+        function renderProfileList() {
+            const container = document.getElementById('profileCardsContainer');
+            container.innerHTML = '';
+
+            if (profiles.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm italic">No profiles found. Create one to get started!</p>';
                 return;
             }
 
-            const context = captureCanvas.getContext('2d');
-            captureCanvas.width = video.videoWidth;
-            captureCanvas.height = video.videoHeight;
-            context.translate(video.videoWidth, 0);
-            context.scale(-1, 1);
-            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            
-            captureCanvas.toBlob(blob => {
-                imageFiles[currentPose] = new File([blob], `${currentPose}.jpg`, { type: 'image/jpeg' });
-                
-                if (currentPose === 'front') currentPose = 'side';
-                else if (currentPose === 'side') currentPose = 'back';
-                else if (currentPose === 'back') currentPose = 'analysis';
-
-                updateCameraUI();
-            }, 'image/jpeg');
+            profiles.forEach((p, index) => {
+                const snapshotCount = p.history ? p.history.length : 0;
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 hover:bg-gray-600 p-4 rounded-xl cursor-pointer transition border border-gray-600 flex justify-between items-center group";
+                card.innerHTML = `
+                    <div class="flex-grow" onclick="selectProfile(${index})">
+                        <h3 class="text-lg font-bold text-white">${p.name}</h3>
+                        <p class="text-xs text-gray-400 mt-1">${p.gender} • ${p.height}cm • ${p.weight}kg</p>
+                        <p class="text-[10px] text-indigo-400 font-semibold mt-2">${snapshotCount} saved snapshots</p>
+                    </div>
+                    <button onclick="deleteProfile(${index}, event)" class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 p-2 transition" title="Delete Profile">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
         }
-        
-        async function runAutomatedAnalysis() {
-            stopCamera();
-            showScreen('report');
-            analysisLoader.style.display = 'flex';
+
+        function addProfile() {
+            const name = document.getElementById('newName').value.trim();
+            const gender = document.getElementById('newGender').value;
+            const height = parseFloat(document.getElementById('newHeight').value);
+            const weight = parseFloat(document.getElementById('newWeight').value);
+            const sports = document.getElementById('newSports').value.trim();
+            const country = document.getElementById('newCountry').value.trim();
+            
+            if (!name || !gender || isNaN(height) || height <= 0 || isNaN(weight) || weight <= 0) {
+                showNotification("Name, Gender, Height, and Weight are required", "error");
+                return;
+            }
+
+            // Capture Skinfolds
+            const skinfolds = {
+                triceps: parseFloat(document.getElementById('sfTriceps').value) || null,
+                subscapular: parseFloat(document.getElementById('sfSubScap').value) || null,
+                biceps: parseFloat(document.getElementById('sfBiceps').value) || null,
+                iliacCrest: parseFloat(document.getElementById('sfIliac').value) || null,
+                supraSpinal: parseFloat(document.getElementById('sfSupra').value) || null,
+                abdominal: parseFloat(document.getElementById('sfAbdom').value) || null,
+                thigh: parseFloat(document.getElementById('sfThigh').value) || null,
+            };
+
+            const newProfile = { 
+                name, gender, height, weight, sports, country, skinfolds, history: [] 
+            };
+            
+            profiles.push(newProfile);
+            saveProfilesToStorage();
+            
+            // Clear fields
+            document.getElementById('newName').value = '';
+            document.getElementById('newGender').value = '';
+            document.getElementById('newHeight').value = '';
+            document.getElementById('newWeight').value = '';
+            document.getElementById('newSports').value = '';
+            document.getElementById('newCountry').value = '';
+            document.getElementById('sfTriceps').value = '';
+            document.getElementById('sfSubScap').value = '';
+            document.getElementById('sfBiceps').value = '';
+            document.getElementById('sfIliac').value = '';
+            document.getElementById('sfSupra').value = '';
+            document.getElementById('sfAbdom').value = '';
+            document.getElementById('sfThigh').value = '';
+            
+            renderProfileList();
+            showNotification(`Profile for ${name} created!`, "success");
+            
+            // Automatically select the newly created profile
+            selectProfile(profiles.length - 1);
+        }
+
+        function deleteProfile(index, event) {
+            event.stopPropagation(); // Prevent triggering selectProfile
+            const profile = profiles[index];
+            if(confirm(`Are you sure you want to permanently delete the profile for ${profile.name}?`)) {
+                profiles.splice(index, 1);
+                saveProfilesToStorage();
+                renderProfileList();
+                showNotification(`Profile ${profile.name} deleted.`, "info");
+            }
+        }
+
+        // --- Screen Transitions ---
+        function selectProfile(index) {
+            currentProfile = profiles[index];
+            
+            // Populate Side Panel Data
+            document.getElementById('activeProfileName').innerText = currentProfile.name;
+            document.getElementById('activeProfileGender').innerText = currentProfile.gender;
+            document.getElementById('activeProfileHeight').innerText = currentProfile.height;
+            document.getElementById('activeProfileWeight').innerText = currentProfile.weight;
+            document.getElementById('activeProfileSport').innerText = currentProfile.sports || 'None';
+
+            // Transition UI
+            document.getElementById('screen-profiles').classList.add('hidden');
+            document.getElementById('screen-main').classList.remove('hidden');
+        }
+
+        async function goBackToProfiles() {
+            if(isCameraRunning) {
+                await stopCamera();
+            }
+            currentProfile = null;
+            
+            // Re-render list to update snapshot counts
+            renderProfileList();
+            
+            // Transition UI
+            document.getElementById('screen-main').classList.add('hidden');
+            document.getElementById('screen-profiles').classList.remove('hidden');
+        }
+
+
+        // --- MediaPipe Setup ---
+        function initMediaPipe() {
+            pose = new Pose({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }});
+            
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            
+            pose.onResults(onPoseResults);
+        }
+
+        // --- Camera Controls ---
+        async function startCamera() {
+            if (!currentProfile) return;
+            
+            // UI Updates
+            document.getElementById('offlineText').classList.add('hidden');
+            document.getElementById('camLoader').classList.remove('hidden');
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('stopBtn').classList.remove('hidden');
+            document.getElementById('scanContainer').classList.remove('hidden');
+            
+            isCameraRunning = true;
+            resetScanState();
+
+            // Setup Camera
+            if(!camera) {
+                camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await pose.send({image: videoElement});
+                    },
+                    width: 1280,
+                    height: 720
+                });
+            }
+            
+            await camera.start();
+            canvasElement.classList.remove('hidden');
+            document.getElementById('camLoader').classList.add('hidden');
+            
+            document.getElementById('saveBtn').disabled = false;
+            document.getElementById('analyzeBtn').disabled = false;
+            
+            setStatus("Camera active. Step back so ankles are visible.", "text-yellow-400");
+        }
+
+        async function stopCamera() {
+            if(camera) {
+                await camera.stop();
+            }
+            isCameraRunning = false;
+            
+            // Clear Canvas
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasElement.classList.add('hidden');
+            document.getElementById('offlineText').classList.remove('hidden');
+            
+            // Reset UI
+            document.getElementById('stopBtn').classList.add('hidden');
+            document.getElementById('startBtn').classList.remove('hidden');
+            document.getElementById('scanContainer').classList.add('hidden');
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            setStatus("Camera stopped.", "text-gray-400");
+            updateDashboard(null);
+            liveMeasurements = null;
+        }
+
+        function setStatus(text, colorClass) {
+            const el = document.getElementById('statusText');
+            el.innerText = text;
+            el.className = `mt-4 text-sm text-center font-medium min-h-[20px] ${colorClass}`;
+        }
+
+        // Math Helper
+        function getDistance(lm1, lm2, w, h) {
+            return Math.sqrt(Math.pow((lm1.x - lm2.x) * w, 2) + Math.pow((lm1.y - lm2.y) * h, 2));
+        }
+
+        // --- Core Tracking & Math Logic ---
+        function onPoseResults(results) {
+            if(!isCameraRunning) return;
+
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Draw original image (flipped horizontally for selfie mode)
+            canvasCtx.translate(canvasElement.width, 0);
+            canvasCtx.scale(-1, 1);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            liveMeasurements = null;
+
+            if (results.poseLandmarks) {
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#f57542', lineWidth: 4});
+                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#f542e6', lineWidth: 2, radius: 4});
+
+                const lm = results.poseLandmarks;
+                const h = canvasElement.height;
+                const w = canvasElement.width;
+
+                const noseY = lm[0].y * h;
+                const lAnkleY = lm[27].y * h;
+                const rAnkleY = lm[28].y * h;
+                
+                const avgAnkleY = (lAnkleY + rAnkleY) / 2.0;
+                const heightPixels = Math.abs(noseY - avgAnkleY);
+
+                // Ensure feet are reasonably visible
+                if (heightPixels > 0 && lm[27].visibility > 0.5 && lm[28].visibility > 0.5) {
+                    
+                    const cmPerPixel = currentProfile.height / heightPixels;
+
+                    // Direct pixel distances
+                    const shoulderWidthPx = Math.abs(lm[11].x * w - lm[12].x * w);
+                    const hipWidthPx = Math.abs(lm[23].x * w - lm[24].x * w);
+
+                    // Real-world lengths
+                    const shoulderWidthCm = shoulderWidthPx * cmPerPixel;
+                    const hipWidthCm = hipWidthPx * cmPerPixel;
+
+                    // Arm Length (Shoulder -> Elbow -> Wrist)
+                    const leftArmPx = getDistance(lm[11], lm[13], w, h) + getDistance(lm[13], lm[15], w, h);
+                    const rightArmPx = getDistance(lm[12], lm[14], w, h) + getDistance(lm[14], lm[16], w, h);
+                    const avgArmLengthCm = ((leftArmPx + rightArmPx) / 2.0) * cmPerPixel;
+
+                    // --- 360 SCAN LOGIC ---
+                    let displayShoulder = shoulderWidthCm;
+                    let displayHip = hipWidthCm;
+
+                    if (isScanning) {
+                        maxShoulderCm = Math.max(maxShoulderCm, shoulderWidthCm);
+                        maxHipCm = Math.max(maxHipCm, hipWidthCm);
+                        scanFramesCount++;
+
+                        displayShoulder = maxShoulderCm;
+                        displayHip = maxHipCm;
+
+                        let progress = (scanFramesCount / maxScanFrames) * 100;
+                        document.getElementById('scanProgressBar').style.width = `${progress}%`;
+
+                        canvasCtx.save();
+                        canvasCtx.scale(-1, 1); 
+                        canvasCtx.translate(-canvasElement.width, 0);
+                        canvasCtx.font = "30px Inter";
+                        canvasCtx.fillStyle = "cyan";
+                        canvasCtx.fillText("SCANNING... SPIN 360°", 30, 50);
+                        canvasCtx.restore();
+
+                        if (scanFramesCount >= maxScanFrames) {
+                            endScan();
+                        }
+                    } else if (maxShoulderCm > 0) {
+                        displayShoulder = maxShoulderCm;
+                        displayHip = maxHipCm;
+                        
+                        canvasCtx.save();
+                        canvasCtx.scale(-1, 1);
+                        canvasCtx.translate(-canvasElement.width, 0);
+                        canvasCtx.font = "24px Inter";
+                        canvasCtx.fillStyle = "#10B981";
+                        canvasCtx.fillText("MAX WIDTHS LOCKED IN", 30, 50);
+                        canvasCtx.restore();
+                    }
+
+                    // --- Advanced Proportional Estimates ---
+                    // Since a 2D camera cannot wrap around the body for circumferences, we use standard anthropometric modifiers
+                    // adjusted by the user's specific width data and base profile height/weight.
+                    const chestCircCm = displayShoulder * 2.5;
+                    const waistCircCm = displayHip * 2.2;
+                    
+                    const neckCircCm = currentProfile.height * 0.21;
+                    const wristCircCm = currentProfile.height * 0.096;
+                    const ankleCircCm = currentProfile.height * 0.125;
+                    
+                    // Thigh circumference based on hip width and a modifier for body mass
+                    const thighCircCm = displayHip * 1.5 + (currentProfile.weight * 0.1); 
+
+                    liveMeasurements = {
+                        shoulder_width_cm: parseFloat(displayShoulder.toFixed(1)),
+                        hip_width_cm: parseFloat(displayHip.toFixed(1)),
+                        chest_circ_cm: parseFloat(chestCircCm.toFixed(1)),
+                        waist_circ_cm: parseFloat(waistCircCm.toFixed(1)),
+                        arm_length_cm: parseFloat(avgArmLengthCm.toFixed(1)),
+                        neck_circ_cm: parseFloat(neckCircCm.toFixed(1)),
+                        wrist_circ_cm: parseFloat(wristCircCm.toFixed(1)),
+                        ankle_circ_cm: parseFloat(ankleCircCm.toFixed(1)),
+                        thighs_circ_cm: parseFloat(thighCircCm.toFixed(1))
+                    };
+
+                    updateDashboard(liveMeasurements);
+
+                } else {
+                    updateDashboard(null);
+                    canvasCtx.save();
+                    canvasCtx.scale(-1, 1);
+                    canvasCtx.translate(-canvasElement.width, 0);
+                    canvasCtx.font = "24px Inter";
+                    canvasCtx.fillStyle = "#EF4444"; 
+                    canvasCtx.fillText("Please step back: Ankles not visible", 30, 50);
+                    canvasCtx.restore();
+                }
+            } else {
+                updateDashboard(null);
+            }
+            canvasCtx.restore();
+        }
+
+        function updateDashboard(measurements) {
+            if(measurements) {
+                document.getElementById('valShoulder').innerText = measurements.shoulder_width_cm + " cm";
+                document.getElementById('valHip').innerText = measurements.hip_width_cm + " cm";
+                document.getElementById('valChest').innerText = measurements.chest_circ_cm + " cm";
+                document.getElementById('valWaist').innerText = measurements.waist_circ_cm + " cm";
+                document.getElementById('valArm').innerText = measurements.arm_length_cm + " cm";
+                document.getElementById('valThighs').innerText = measurements.thighs_circ_cm + " cm";
+                document.getElementById('valNeck').innerText = measurements.neck_circ_cm + " cm";
+                document.getElementById('valWrist').innerText = measurements.wrist_circ_cm + " cm";
+                document.getElementById('valAnkle').innerText = measurements.ankle_circ_cm + " cm";
+            } else {
+                document.getElementById('valShoulder').innerText = "-- cm";
+                document.getElementById('valHip').innerText = "-- cm";
+                document.getElementById('valChest').innerText = "-- cm";
+                document.getElementById('valWaist').innerText = "-- cm";
+                document.getElementById('valArm').innerText = "-- cm";
+                document.getElementById('valThighs').innerText = "-- cm";
+                document.getElementById('valNeck').innerText = "-- cm";
+                document.getElementById('valWrist').innerText = "-- cm";
+                document.getElementById('valAnkle').innerText = "-- cm";
+            }
+        }
+
+        // --- 360 Scan Features ---
+        function resetScanState() {
+            isScanning = false;
+            scanFramesCount = 0;
+            maxShoulderCm = 0.0;
+            maxHipCm = 0.0;
+            document.getElementById('scanBtn').classList.remove('hidden');
+            document.getElementById('scanProgressContainer').classList.add('hidden');
+            document.getElementById('scanText').classList.add('hidden');
+            document.getElementById('scanProgressBar').style.width = '0%';
+        }
+
+        function startScan() {
+            resetScanState();
+            isScanning = true;
+            document.getElementById('scanBtn').classList.add('hidden');
+            document.getElementById('scanProgressContainer').classList.remove('hidden');
+            document.getElementById('scanText').classList.remove('hidden');
+            setStatus("Capturing maximum widths...", "text-blue-400");
+        }
+
+        function endScan() {
+            isScanning = false;
+            document.getElementById('scanProgressContainer').classList.add('hidden');
+            document.getElementById('scanText').classList.add('hidden');
+            document.getElementById('scanBtn').classList.remove('hidden');
+            document.getElementById('scanProgressBar').style.width = '0%';
+            
+            setStatus("360° Scan Complete! Max widths locked in.", "text-green-400");
+            setTimeout(() => {
+                setStatus("Camera active. Max widths are currently held.", "text-yellow-400");
+            }, 4000);
+        }
+
+        // --- Save Data ---
+        function saveSnapshot() {
+            if(!liveMeasurements) {
+                showNotification("Cannot save. Ensure your full body is visible.", "error");
+                return;
+            }
+            
+            const record = {
+                ...liveMeasurements,
+                timestamp: new Date().toISOString()
+            };
+            
+            if (!currentProfile.history) currentProfile.history = [];
+            currentProfile.history.push(record);
+            
+            // Persist the changes to localStorage
+            saveProfilesToStorage();
+            
+            resetScanState();
+            
+            setStatus("Snapshot saved to profile!", "text-green-400");
+            showNotification("Measurements saved to session.", "success");
+            setTimeout(() => setStatus("Camera active.", "text-yellow-400"), 3000);
+        }
+
+        // --- AI API ---
+        async function generateAIReport() {
+            if(!liveMeasurements) {
+                showNotification("No live measurements to analyze. Step into frame.", "error");
+                return;
+            }
+
+            document.getElementById('aiModal').classList.remove('hidden');
+            document.getElementById('aiLoader').classList.remove('hidden');
+            document.getElementById('aiContent').classList.add('hidden');
+
+            // Format Skinfolds for prompt
+            let skinfoldText = "Not provided.";
+            const sf = currentProfile.skinfolds;
+            if(sf && Object.values(sf).some(val => val !== null)) {
+                skinfoldText = `Triceps: ${sf.triceps || 0}mm, Subscapular: ${sf.subscapular || 0}mm, Biceps: ${sf.biceps || 0}mm, Iliac Crest: ${sf.iliacCrest || 0}mm, Supra Spinal: ${sf.supraSpinal || 0}mm, Abdominal: ${sf.abdominal || 0}mm, Thigh: ${sf.thigh || 0}mm`;
+            }
+
+            const prompt = `
+            Act as an elite sports biomechanist and anthropometrist.
+            Analyze the following user profile and live bodily measurements.
+            If skinfold data is provided, use it to accurately calculate the Heath-Carter Somatotype. If not, estimate based on height, weight, and general proportions.
+
+            Profile:
+            - Gender: ${currentProfile.gender}
+            - Height: ${currentProfile.height} cm
+            - Weight: ${currentProfile.weight} kg
+            - Primary Sport: ${currentProfile.sports || 'None'}
+            - Country: ${currentProfile.country || 'Unknown'}
+
+            Camera Measurements: ${JSON.stringify(liveMeasurements)}
+            
+            Skinfold Measurements (mm): ${skinfoldText}
+            
+            Return ONLY a JSON object with 'bodyType' and 'sportsRecommendation' keys.
+            Expected JSON format:
+            {
+                "bodyType": {"type": "Determined Body Type", "description": "Detailed biomechanical description of their proportions."},
+                "sportsRecommendation": {"recommended": ["Sport 1", "Sport 2", "Sport 3"], "caution": ["Sport A", "Sport B"]}
+            }`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: "You are an expert sports biomechanics analyzer. Return pure JSON." }] },
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
-                analysisStatusText.textContent = "Detecting body scale (1/4)...";
-                const heightPrompt = `From the front-view image, return ONLY JSON with pixel coordinates for "top_of_head" and "bottom_of_feet".`;
-                const heightCoords = await callGeminiVision(imageFiles.front, heightPrompt);
-                if (!heightCoords?.top_of_head || !heightCoords?.bottom_of_feet) throw new Error("Could not determine height from the front photo.");
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                analysisStatusText.textContent = "Analyzing front view (2/4)...";
-                const frontPrompt = `From the front-view image, return ONLY JSON with pixel coordinates for: shoulder_left, shoulder_right, chest_left, chest_right, waist_left, waist_right, hip_left, hip_right.`;
-                const frontCoords = await callGeminiVision(imageFiles.front, frontPrompt);
-                if (!frontCoords) throw new Error("Could not identify landmarks on the front photo.");
-
-                analysisStatusText.textContent = "Analyzing side view (3/4)...";
-                const sidePrompt = `From the side-view image, return ONLY JSON with pixel coordinates for: chest_front, chest_back, waist_front, waist_back, hip_front, hip_back.`;
-                const sideCoords = await callGeminiVision(imageFiles.side, sidePrompt);
-                if (!sideCoords) throw new Error("Could not determine body depth from the side photo.");
+                if(!response.ok) throw new Error(`API Error ${response.status}`);
                 
-                analysisStatusText.textContent = "Analyzing back view (4/4)...";
-                const backPrompt = `From the back-view image, return ONLY JSON with pixel coordinates for shoulder_left_back and shoulder_right_back.`;
-                const backCoords = await callGeminiVision(imageFiles.back, backPrompt);
+                const result = await response.json();
+                const jsonText = result.candidates[0].content.parts[0].text;
+                const analysis = JSON.parse(jsonText);
 
-                analysisStatusText.textContent = "Calculating measurements...";
-                const allCoords = { ...heightCoords, ...frontCoords, ...sideCoords, ...backCoords };
-                const pixelHeight = Math.abs(allCoords.top_of_head.y - allCoords.bottom_of_feet.y);
-                const pixelsPerCm = pixelHeight > 0 ? pixelHeight / currentProfile.height : 0;
-                if (pixelsPerCm === 0) throw new Error("Could not calculate body scale.");
+                document.getElementById('aiBodyType').innerText = analysis.bodyType.type;
+                document.getElementById('aiDescription').innerText = analysis.bodyType.description;
+                document.getElementById('aiRecommended').innerHTML = analysis.sportsRecommendation.recommended.map(s => `<li>${s}</li>`).join('');
+                document.getElementById('aiCaution').innerHTML = analysis.sportsRecommendation.caution.map(s => `<li>${s}</li>`).join('');
 
-                const measurements = calculateMeasurements(allCoords, pixelsPerCm);
-                lastCalculatedMeasurements = measurements;
-                displayBasicReport(measurements);
+                document.getElementById('aiLoader').classList.add('hidden');
+                document.getElementById('aiContent').classList.remove('hidden');
 
             } catch (error) {
-                 console.error("Automated analysis failed:", error);
-                 showModal(error.message || "An unexpected error occurred during analysis.");
-                 showScreen('camera'); // Go back to camera on failure
-            } finally {
-                analysisLoader.style.display = 'none';
+                console.error("AI Error:", error);
+                closeAIModal();
+                showNotification("Failed to generate AI report. Check console.", "error");
             }
         }
-        
-        function resizeAndEncodeImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; const maxWidth = 512; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const base64 = canvas.toDataURL(file.type).split(',')[1]; resolve({ mimeType: file.type, base64 }); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 
-        async function callGeminiVision(imageFile, prompt) {
-            if (!imageFile) return null;
-            const imageData = await resizeAndEncodeImage(imageFile);
-            const payload = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
-            try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.candidates?.[0]?.content?.parts?.[0]) {
-                        try { return JSON.parse(result.candidates[0].content.parts[0].text); } catch (jsonError) { console.error("Failed to parse JSON:", jsonError); return null; }
-                    }
-                } else { const errorText = await response.text(); console.error(`API Error:`, response.status, errorText); if (errorText.includes("API key not valid")) showModal("API Key Error: Key is not valid."); }
-            } catch (error) { console.error(`Fetch error:`, error); }
-            return null;
-        }
-
-        function calculateMeasurements(coords, pixelsPerCm) {
-            const measurements = {}; const pi = Math.PI;
-            const getCircumference = (w, d) => { if (!w || !d || w <= 0 || d <= 0) return 0; const a = w / 2, b = d / 2; return pi * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b))); };
-            const pxToCm = (px) => px / pixelsPerCm;
-            measurements["Shoulder Width"] = pxToCm(Math.abs((coords?.shoulder_left?.x || 0) - (coords?.shoulder_right?.x || 0)));
-            measurements["Chest"] = getCircumference(pxToCm(Math.abs((coords?.chest_left?.x || 0) - (coords?.chest_right?.x || 0))), pxToCm(Math.abs((coords?.chest_front?.x || 0) - (coords?.chest_back?.x || 0))));
-            measurements["Waist"] = getCircumference(pxToCm(Math.abs((coords?.waist_left?.x || 0) - (coords?.waist_right?.x || 0))), pxToCm(Math.abs((coords?.waist_front?.x || 0) - (coords?.waist_back?.x || 0))));
-            measurements["Hip"] = getCircumference(pxToCm(Math.abs((coords?.hip_left?.x || 0) - (coords?.hip_right?.x || 0))), pxToCm(Math.abs((coords?.hip_front?.x || 0) - (coords?.hip_back?.x || 0))));
-            return measurements;
-        }
-
-        async function getAiPhysiqueAnalysis(measurements) {
-            const prompt = `Given these measurements for a ${currentProfile.gender}, analyze physique for somatotype and sports recommendations. Return ONLY valid JSON with 'bodyType' ({ "type": "...", "description": "..." }) and 'sportsRecommendation' ({ "recommended": ["..."], "caution": ["..."] }). Data: ${JSON.stringify(measurements, null, 2)}`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-            try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (response.ok) { const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]) { return JSON.parse(result.candidates[0].content.parts[0].text); } } else { console.error(`Analysis API Error:`, response.status, await response.text()); } } catch (error) { console.error(`Analysis Fetch error:`, error); } return null;
-        }
-        
-        async function handleInDepthAnalysis() {
-            if (!lastCalculatedMeasurements) return;
-            getInDepthAnalysisBtn.classList.add('hidden');
-            inDepthLoader.style.display = 'flex';
-            const analysis = await getAiPhysiqueAnalysis(lastCalculatedMeasurements);
-            if (analysis?.bodyType && analysis?.sportsRecommendation) {
-                document.getElementById('body-type-title').textContent = analysis.bodyType.type; document.getElementById('body-type-description').textContent = analysis.bodyType.description;
-                document.getElementById('recommended-sports-list').innerHTML = analysis.sportsRecommendation.recommended.map(s => `<li>${s}</li>`).join('');
-                document.getElementById('caution-sports-list').innerHTML = analysis.sportsRecommendation.caution.map(s => `<li>${s}</li>`).join('');
-                inDepthContent.classList.remove('hidden');
-            } else { showModal("Could not generate the in-depth analysis."); getInDepthAnalysisBtn.classList.remove('hidden'); }
-            inDepthLoader.style.display = 'none';
-        }
-
-        function displayBasicReport(measurements) {
-            resultsGrid.innerHTML = '';
-            for (const [key, value] of Object.entries(measurements)) {
-                const item = document.createElement('div');
-                item.className = 'bg-gray-800 p-4 rounded-lg';
-                item.innerHTML = `<p class="text-sm text-gray-400">${key}</p><p class="text-2xl font-bold">${Number(value).toFixed(1)} <span class="text-base font-normal text-gray-500">cm</span></p>`;
-                resultsGrid.appendChild(item);
-            }
-            inDepthContent.classList.add('hidden');
-            getInDepthAnalysisBtn.classList.remove('hidden');
+        function closeAIModal() {
+            document.getElementById('aiModal').classList.add('hidden');
         }
 
     </script>
 </body>
 </html>
-
